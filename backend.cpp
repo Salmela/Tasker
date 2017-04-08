@@ -1,17 +1,28 @@
 #include "backend.h"
 #include <algorithm>
 
+//TaskList.cpp
+
 void TaskList::addTask(Task *task)
 {
-	tasks.push_back(task);
+	mTasks.push_back(task);
 }
 
 void TaskList::removeTask(Task *task)
 {
-	tasks.erase(std::remove(tasks.begin(), tasks.end(), task), tasks.end());
+	mTasks.erase(std::remove(mTasks.begin(), mTasks.end(), task),
+		mTasks.end());
 }
 
 unsigned int TaskList::getSize()
 {
-	return tasks.size();
+	return mTasks.size();
+}
+
+//TaskListView.cpp
+
+
+TaskListView::TaskListView(TaskList *list)
+{
+	mList = list;
 }

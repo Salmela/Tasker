@@ -9,7 +9,7 @@ public:
 	TaskState(std::string name);
 	void rename(std::string name);
 private:
-	std::string name;
+	std::string mName;
 };
 
 class Task
@@ -22,9 +22,9 @@ public:
 	void setDescription(std::string text);
 	std::string getDescription() const;
 private:
-	std::string name;
-	std::string desc;
-	TaskState *state;
+	std::string mName;
+	std::string mDesc;
+	TaskState *mState;
 };
 
 class TaskList
@@ -34,14 +34,17 @@ public:
 	void removeTask(Task *task);
 	unsigned int getSize();
 private:
-	std::vector<Task*> tasks;
+	std::vector<Task*> mTasks;
 };
 
 
 class TaskListView
 {
 public:
+	TaskListView(TaskList *list);
 	void render();
+private:
+	TaskList *mList;
 };
 
 class TaskView
