@@ -1,0 +1,6 @@
+tasker
+test
+
+*.d
+*.o
+*.sw?
