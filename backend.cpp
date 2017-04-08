@@ -38,6 +38,11 @@ std::string Task::getName() const
 	return mName;
 }
 
+std::string Task::getDescription() const
+{
+	return mDesc;
+}
+
 //TaskList.cpp
 
 void TaskList::addTask(Task *task)

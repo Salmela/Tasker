@@ -106,7 +106,11 @@ void TaskListView::render(CliInterface *parent)
 	if (command == "o" || command == "open") {
 		int taskIndex;
 		std::cin >> taskIndex;
-		//parent->newView(new TaskView(taskIndex));
+		if (taskIndex < 1 && taskIndex > (int)mList->getSize()) {
+			std::cerr << "Task index is out-of-bounds.\n";
+			return;
+		}
+		parent->newView(new TaskView(mList->all()[taskIndex - 1]));
 	} else if (command == "n" || command == "new") {
 		parent->newView(new CreateTaskView());
 	} else if (command == "q" || command == "quit") {
@@ -120,7 +124,34 @@ void CreateTaskView::render(CliInterface *parent)
 	std::string name;
 	std::cout << "Name: ";
 	std::cin >> name;
+	std::cout << "\n";
 
-	parent->getTaskList()->addTask(new Task(name));
+	Task *task = new Task(name);
+	parent->getTaskList()->addTask(task);
 	parent->deleteView(this);
+	parent->newView(new TaskView(task));
+}
+
+//TaskView.cpp
+TaskView::TaskView(Task *task)
+{
+	mTask = task;
+}
+
+void TaskView::render(CliInterface *parent)
+{
+	std::string name = mTask->getName();
+	std::cout << name << "\n";
+	for(unsigned int i = 0; i < name.size(); i++) {
+		std::cout << "=";
+	}
+	std::cout << "\n" << mTask->getDescription() << "\n";
+
+	std::cout << "Command> ";
+
+	std::string command;
+	std::cin >> command;
+	if (command == "e" || command == "exit") {
+		parent->deleteView(this);
+	}
 }

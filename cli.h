@@ -19,7 +19,10 @@ public:
 class TaskView : public View
 {
 public:
+	TaskView(Task *task);
 	void render(CliInterface *parent) override;
+private:
+	Task *mTask;
 };
 
 class CreateTaskView : public View
