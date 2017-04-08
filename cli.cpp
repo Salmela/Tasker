@@ -89,8 +89,11 @@ void TaskListView::render(CliInterface *parent)
 	std::cin >> command;
 
 	if (command == "o" || command == "open") {
-		std::cout <<"Open task\n";
+		int task;
+		std::cin >> task;
+		parent->setView(TASK_VIEW);
 	} else if (command == "n" || command == "new") {
+		parent->setView(NEW_TASK_VIEW);
 	} else if (command == "q" || command == "quit") {
 		parent->setView(QUIT);
 	}

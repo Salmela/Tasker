@@ -4,7 +4,8 @@ enum ViewType
 {
 	QUIT,
 	TASK_LIST_VIEW,
-	TASK_VIEW
+	TASK_VIEW,
+	NEW_TASK_VIEW
 };
 
 class CliInterface {
@@ -13,6 +14,12 @@ public:
 };
 
 class TaskView
+{
+public:
+	void render(CliInterface *parent);
+};
+
+class NewTaskView
 {
 public:
 	void render(CliInterface *parent);
