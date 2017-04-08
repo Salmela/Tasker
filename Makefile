@@ -1,5 +1,5 @@
-CFLAGS := -c -g -Wall -rdynamic -D_DEBUG -ggdb3
-LDFLAGS := -g -rdynamic
+CXXFLAGS := -c -g -Wall -ggdb3
+LDFLAGS := -g
 
 SOURCES := backend.cpp
 

@@ -43,20 +43,23 @@ private:
 Cli::Cli(int argc, char **argv)
 	:mListView(&mList)
 {
-	mRunning = true;
 	mActiveView = TASK_LIST_VIEW;
+}
+
+void Cli::setView(ViewType type)
+{
+	mActiveView = type;
 }
 
 bool Cli::mainLoop()
 {
-	while(mRunning) {
+	while(mActiveView != QUIT) {
 		switch(mActiveView) {
 		case TASK_LIST_VIEW:
-			mListView.render();
-			mRunning = false;
+			mListView.render(this);
 			break;
 		case TASK_VIEW:
-			//mView.render();
+			//mView.render(this);
 			break;
 		default:
 			throw CliException("Invalid view.");
@@ -73,11 +76,22 @@ TaskListView::TaskListView(TaskList *list)
 	mList = list;
 }
 
-void TaskListView::render()
+void TaskListView::render(CliInterface *parent)
 {
 	std::cout << "Task list:\n";
 
 	if (mList->getSize() == 0) {
 		std::cout << "  [Empty]\n";
+	}
+	std::cout << "Command> ";
+
+	std::string command;
+	std::cin >> command;
+
+	if (command == "o" || command == "open") {
+		std::cout <<"Open task\n";
+	} else if (command == "n" || command == "new") {
+	} else if (command == "q" || command == "quit") {
+		parent->setView(QUIT);
 	}
 }
