@@ -1,4 +1,4 @@
-/* Temporary file file for backend code.
+/* Commandline interface for tasker.
  *
  * Copyright (C) 2017 Aleksi Salmela
  *
@@ -17,24 +17,35 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
-#include <algorithm>
+#include <iostream>
 
 #include "backend.h"
+#include "cli.h"
 
-//TaskList.cpp
-
-void TaskList::addTask(Task *task)
+Cli::Cli(int argc, char **argv)
+	:mView(&mList)
 {
-	mTasks.push_back(task);
 }
 
-void TaskList::removeTask(Task *task)
+bool Cli::mainLoop()
 {
-	mTasks.erase(std::remove(mTasks.begin(), mTasks.end(), task),
-		mTasks.end());
+	while(mRunning) {
+		//switch() {
+			mView.render();
+		//}
+	}
+	return true;
 }
 
-unsigned int TaskList::getSize()
+//TaskListView.cpp
+
+
+TaskListView::TaskListView(TaskList *list)
 {
-	return mTasks.size();
+	mList = list;
+}
+
+void TaskListView::render()
+{
+	std::cout << "Task list:";
 }

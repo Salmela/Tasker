@@ -37,18 +37,3 @@ private:
 	std::vector<Task*> mTasks;
 };
 
-
-class TaskListView
-{
-public:
-	TaskListView(TaskList *list);
-	void render();
-private:
-	TaskList *mList;
-};
-
-class TaskView
-{
-public:
-	void render();
-};

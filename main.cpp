@@ -18,11 +18,11 @@
  * Boston, MA 02110-1301, USA.
  */
 #include "backend.h"
+#include "cli.h"
 
 int main(int argc, char **argv)
 {
-	TaskList list;
-	TaskListView view(&list);
+	Cli cli(argc, argv);
 
-	return 1;
+	return (int)!cli.mainLoop();
 }

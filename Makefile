@@ -13,8 +13,8 @@ override CPPFLAGS += -MMD
 test: tests.o $(OBJECTS)
 	$(CXX) $(LDFLAGS) tests.o $(OBJECTS) -o $@
 
-tasker: main.o $(OBJECTS)
-	$(CXX) $(LDFLAGS) main.o $(OBJECTS) -o $@
+tasker: main.o cli.o $(OBJECTS)
+	$(CXX) $(LDFLAGS) main.o cli.o $(OBJECTS) -o $@
 
 clean:
 	rm -f test tasker *.o *.d
