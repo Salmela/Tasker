@@ -18,21 +18,49 @@
  * Boston, MA 02110-1301, USA.
  */
 #include <iostream>
+#include <string>
+#include <exception>
 
 #include "backend.h"
 #include "cli.h"
 
+class CliException : public std::exception {
+public:
+	CliException(std::string message) {
+		mMessage = message.c_str();
+	}
+	CliException(const char *message) {
+		mMessage = message;
+	}
+
+	const char *what() const throw() {
+		return mMessage;
+	}
+private:
+	const char *mMessage;
+};
+
 Cli::Cli(int argc, char **argv)
-	:mView(&mList)
+	:mListView(&mList)
 {
+	mRunning = true;
+	mActiveView = TASK_LIST_VIEW;
 }
 
 bool Cli::mainLoop()
 {
 	while(mRunning) {
-		//switch() {
-			mView.render();
-		//}
+		switch(mActiveView) {
+		case TASK_LIST_VIEW:
+			mListView.render();
+			mRunning = false;
+			break;
+		case TASK_VIEW:
+			//mView.render();
+			break;
+		default:
+			throw CliException("Invalid view.");
+		}
 	}
 	return true;
 }
@@ -47,5 +75,9 @@ TaskListView::TaskListView(TaskList *list)
 
 void TaskListView::render()
 {
-	std::cout << "Task list:";
+	std::cout << "Task list:\n";
+
+	if (mList->getSize() == 0) {
+		std::cout << "  [Empty]\n";
+	}
 }

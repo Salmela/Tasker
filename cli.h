@@ -1,6 +1,6 @@
 #pragma once
 
-enum Views
+enum ViewType
 {
 	TASK_LIST_VIEW,
 	TASK_VIEW
@@ -29,6 +29,8 @@ public:
 	bool mainLoop();
 private:
 	TaskList mList;
-	TaskListView mView;
+	TaskListView mListView;
+	TaskView mView;
+	ViewType mActiveView;
 	bool mRunning;
 };
