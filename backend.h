@@ -32,8 +32,9 @@ class TaskList
 public:
 	void addTask(Task *task);
 	void removeTask(Task *task);
+	unsigned int getSize();
 private:
-	std::vector<Task> tasks;
+	std::vector<Task*> tasks;
 };
 
 

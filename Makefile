@@ -3,12 +3,12 @@ LDFLAGS := -g -rdynamic
 
 SOURCES := backend.cpp
 
+all: tasker test
+
 OBJECTS := $(SOURCES:.cpp=.o)
 override CPPFLAGS += -MMD
 
 -include $(subst .cpp,.d, $(SOURCES))
-
-all: tasker test
 
 test: tests.o $(OBJECTS)
 	$(CXX) $(LDFLAGS) tests.o $(OBJECTS) -o $@
