@@ -43,29 +43,34 @@ private:
 Cli::Cli(int argc, char **argv)
 	:mListView(&mList)
 {
-	mActiveView = TASK_LIST_VIEW;
+	newView(&mListView);
 }
 
-void Cli::setView(ViewType type)
+void Cli::newView(View *view)
 {
-	mActiveView = type;
+	mViewStack.push_back(view);
+}
+
+void Cli::deleteView(View *view)
+{
+	if (mViewStack.back() != view) {
+		throw CliException("You can only delete the top item");
+	}
+
+	mViewStack.pop_back();
 }
 
 bool Cli::mainLoop()
 {
-	while(mActiveView != QUIT) {
-		switch(mActiveView) {
-		case TASK_LIST_VIEW:
-			mListView.render(this);
-			break;
-		case TASK_VIEW:
-			//mView.render(this);
-			break;
-		default:
-			throw CliException("Invalid view.");
-		}
+	while(!mViewStack.empty()) {
+		View *activeView = getActiveView();
+		activeView->render(this);
 	}
 	return true;
+}
+
+View *Cli::getActiveView() {
+	return mViewStack.back();
 }
 
 //TaskListView.cpp
@@ -89,12 +94,12 @@ void TaskListView::render(CliInterface *parent)
 	std::cin >> command;
 
 	if (command == "o" || command == "open") {
-		int task;
-		std::cin >> task;
-		parent->setView(TASK_VIEW);
+		int taskIndex;
+		std::cin >> taskIndex;
+		//parent->newView(new TaskView(taskIndex));
 	} else if (command == "n" || command == "new") {
-		parent->setView(NEW_TASK_VIEW);
+		//parent->newView(new CreateTaskView());
 	} else if (command == "q" || command == "quit") {
-		parent->setView(QUIT);
+		parent->deleteView(this);
 	}
 }

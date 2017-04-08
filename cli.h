@@ -1,31 +1,33 @@
 #pragma once
 
-enum ViewType
-{
-	QUIT,
-	TASK_LIST_VIEW,
-	TASK_VIEW,
-	NEW_TASK_VIEW
-};
+class View;
 
 class CliInterface {
 public:
-	virtual void setView(ViewType type) = 0;
+	virtual void newView(View *view) = 0;
+	//virtual void replaceView(View *view) = 0;
+	virtual void deleteView(View *view) = 0;
 };
 
-class TaskView
+class View
+{
+public:
+	virtual void render(CliInterface *parent) = 0;
+};
+
+class TaskView : public View
 {
 public:
 	void render(CliInterface *parent);
 };
 
-class NewTaskView
+class CreateTaskView : public View
 {
 public:
 	void render(CliInterface *parent);
 };
 
-class TaskListView
+class TaskListView : public View
 {
 public:
 	TaskListView(TaskList *list);
@@ -40,10 +42,11 @@ public:
 	Cli(int argc, char **argv);
 
 	bool mainLoop();
-	void setView(ViewType type);
+	void newView(View *view);
+	void deleteView(View *view);
+	View *getActiveView();
 private:
 	TaskList mList;
 	TaskListView mListView;
-	TaskView mView;
-	ViewType mActiveView;
+	std::vector<View*> mViewStack;
 };
