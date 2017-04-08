@@ -7,7 +7,8 @@ class TaskState
 {
 public:
 	TaskState(std::string name);
-	void rename(std::string name);
+	void rename(std::string newName);
+	std::string getName();
 private:
 	std::string mName;
 };
@@ -15,6 +16,8 @@ private:
 class Task
 {
 public:
+	Task(std::string name);
+
 	void setName(std::string name);
 	std::string getName() const;
 	void setState(TaskState *state);
@@ -32,6 +35,7 @@ class TaskList
 public:
 	void addTask(Task *task);
 	void removeTask(Task *task);
+	const std::vector<Task*> all();
 	unsigned int getSize();
 private:
 	std::vector<Task*> mTasks;

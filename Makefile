@@ -1,4 +1,4 @@
-CXXFLAGS := -c -g -Wall -ggdb3
+CXXFLAGS := -c -g -Wall -ggdb3 -std=gnu++11
 LDFLAGS := -g
 
 SOURCES := backend.cpp

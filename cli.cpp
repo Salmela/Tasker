@@ -69,12 +69,17 @@ bool Cli::mainLoop()
 	return true;
 }
 
-View *Cli::getActiveView() {
+View *Cli::getActiveView()
+{
 	return mViewStack.back();
 }
 
-//TaskListView.cpp
+TaskList *Cli::getTaskList()
+{
+	return &mList;
+}
 
+//TaskListView.cpp
 
 TaskListView::TaskListView(TaskList *list)
 {
@@ -88,6 +93,11 @@ void TaskListView::render(CliInterface *parent)
 	if (mList->getSize() == 0) {
 		std::cout << "  [Empty]\n";
 	}
+
+	unsigned int i = 1;
+	for (Task *t : mList->all()) {
+		std::cout << " " << i++ << ". " << t->getName() << "\n";
+	}
 	std::cout << "Command> ";
 
 	std::string command;
@@ -98,8 +108,19 @@ void TaskListView::render(CliInterface *parent)
 		std::cin >> taskIndex;
 		//parent->newView(new TaskView(taskIndex));
 	} else if (command == "n" || command == "new") {
-		//parent->newView(new CreateTaskView());
+		parent->newView(new CreateTaskView());
 	} else if (command == "q" || command == "quit") {
 		parent->deleteView(this);
 	}
+}
+
+//CreateListView.cpp
+void CreateTaskView::render(CliInterface *parent)
+{
+	std::string name;
+	std::cout << "Name: ";
+	std::cin >> name;
+
+	parent->getTaskList()->addTask(new Task(name));
+	parent->deleteView(this);
 }

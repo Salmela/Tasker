@@ -21,6 +21,23 @@
 
 #include "backend.h"
 
+//Task.cpp
+
+Task::Task(std::string name)
+	:mName(name)
+{
+}
+
+void Task::setName(std::string newName)
+{
+	mName = newName;
+}
+
+std::string Task::getName() const
+{
+	return mName;
+}
+
 //TaskList.cpp
 
 void TaskList::addTask(Task *task)
@@ -32,6 +49,11 @@ void TaskList::removeTask(Task *task)
 {
 	mTasks.erase(std::remove(mTasks.begin(), mTasks.end(), task),
 		mTasks.end());
+}
+
+const std::vector<Task*> TaskList::all()
+{
+	return mTasks;
 }
 
 unsigned int TaskList::getSize()
