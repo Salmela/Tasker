@@ -18,6 +18,7 @@
  * Boston, MA 02110-1301, USA.
  */
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <exception>
 
@@ -107,8 +108,18 @@ void TaskListView::render(CliInterface *parent)
 	}
 	std::cout << "Command> ";
 
+	std::string line;
+	std::getline(std::cin, line);
+	std::istringstream iss(line);
+
 	std::string command;
-	std::cin >> command;
+	iss >> command;
+
+	std::vector<std::string> args;
+	std::string arg;
+	while(iss >> arg) {
+		args.push_back(arg);
+	}
 
 	if (command == "o" || command == "open") {
 		int taskIndex;
@@ -125,13 +136,18 @@ void TaskListView::render(CliInterface *parent)
 	}
 }
 
-//CreateListView.cpp
+/// CreateListView
 void CreateTaskView::render(CliInterface *parent)
 {
-	std::string name;
+	std::string name, type;
+
 	std::cout << "Name: ";
-	std::cin >> name;
+	std::getline(std::cin, name);
+
+	std::cout << "Type: ";
+	std::getline(std::cin, type);
 	std::cout << "\n";
+	//TODO handle type
 
 	Task *task = new Task(name);
 	parent->getTaskList()->addTask(task);
