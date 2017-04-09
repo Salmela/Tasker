@@ -21,11 +21,62 @@
 
 #include "backend.h"
 
-/// Task list
+/// TaskState
+bool createTaskState() {
+	TaskState *state = TaskState::create("test");
+	state->ref();
+	state->unref();
+	bool res = (state && "test" == state->getName());
+	state->free();
+	return res;
+}
+
+bool createTaskStateAndDelete() {
+	TaskState *state = TaskState::create("test");
+	state->free();
+	return true;
+}
+
+bool createRefTaskStateAndDelete() {
+	TaskState *state = TaskState::create("test");
+	state->ref();
+	state->free();
+	bool res = (state && "test" == state->getName());
+	state->unref();
+	return res;
+}
+
+/// TaskType
+
+bool createTaskTypeAndDelete() {
+	TaskType type("test");
+
+	TaskState *state = TaskState::create("start");
+	TaskState *endState = TaskState::create("end");
+
+	type.setStartState(state);
+	type.setEndStates({endState});
+	type.setTransition(state, endState);
+
+	bool res = type.canChange(state, endState);
+	res &= !type.canChange(endState, state);
+
+	auto ends = type.possibleChanges(state);
+	res &= ends.size() == 1;
+	res &= ends.find(endState) != ends.end();
+	res &= type.isClosed(endState);
+
+	delete state;
+	delete endState;
+
+	return res;
+}
+
+/// TaskList
 
 bool addAndRemoveTask() {
 	TaskList list;
-	Task *task = new Task();
+	Task *task = new Task("test");
 
 	list.addTask(task);
 	list.removeTask(task);
@@ -35,10 +86,19 @@ bool addAndRemoveTask() {
 	return list.getSize() == 0;
 }
 
-
 int main(int argc, char **argv)
 {
 	bool success;
+	success = createTaskState();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = createTaskStateAndDelete();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = createRefTaskStateAndDelete();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+
+	success = createTaskTypeAndDelete();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+
 	success = addAndRemoveTask();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	return 0;

@@ -18,10 +18,153 @@
  * Boston, MA 02110-1301, USA.
  */
 #include <algorithm>
+#include <exception>
 
 #include "backend.h"
 
-//Task.cpp
+/// TaskState
+TaskState::TaskState(std::string name)
+	:mName(name)
+{
+	mIsDeleted = false;
+	mRefCount = 0;
+}
+
+TaskState *TaskState::create(std::string name)
+{
+	return new TaskState(name);
+}
+
+void TaskState::rename(std::string newName)
+{
+	mName = newName;
+}
+
+std::string TaskState::getName() const
+{
+	return mName;
+}
+
+void TaskState::ref()
+{
+	if(mIsDeleted) {
+		throw std::exception();
+	}
+	mRefCount++;
+}
+
+void TaskState::unref()
+{
+	if(mRefCount <= 0) {
+		throw std::exception();
+	}
+	mRefCount--;
+
+	if(mIsDeleted && mRefCount == 0) {
+		free();
+	}
+}
+
+void TaskState::free()
+{
+	if(mRefCount == 0) {
+		delete this;
+		return;
+	}
+	mIsDeleted = true;
+}
+
+/// TaskType
+
+TaskType::TaskType(std::string name)
+	:mName(name), mStartState(NULL)
+{
+}
+
+void TaskType::rename(std::string newName)
+{
+	mName = newName;
+}
+
+std::string TaskType::getName() const
+{
+	return mName;
+}
+
+void TaskType::setStartState(TaskState *state)
+{
+	if(mStartState == state) {
+		return;
+	}
+	if(mStartState) {
+		mStartState->unref();
+	}
+	state->ref();
+	mStartState = state;
+}
+
+void TaskType::setEndStates(std::set<TaskState*> states)
+{
+	for(TaskState *state : states) {
+		state->ref();
+	}
+	for(TaskState *state : mEndStates) {
+		state->unref();
+	}
+
+	mEndStates = states;//TODO should we duplicate here
+}
+
+void TaskType::setTransition(TaskState *from, TaskState *to, bool create)
+{
+	auto iter = mStateMap.find(from);
+	std::set<TaskState*> *set;
+	if(iter == mStateMap.end()) {
+		if(!create) {
+			return;
+		}
+		set = &mStateMap[from];
+		from->ref();
+	} else {
+		set = &iter->second;
+	}
+
+	if(create) {
+		set->insert(to);
+		to->ref();
+	} else {
+		set->erase(to);
+		to->unref();
+		if(set->empty()) {
+			mStateMap.erase(from);
+			from->unref();
+		}
+	}
+}
+
+bool TaskType::canChange(TaskState *from, TaskState *to) const
+{
+	std::set<TaskState*> states;
+	states = possibleChanges(from);
+
+	return states.find(to) != states.end();
+}
+
+const std::set<TaskState*> TaskType::possibleChanges(TaskState *from) const
+{
+	auto iter = mStateMap.find(from);
+	if(iter == mStateMap.end()) {
+		return std::set<TaskState*>();
+	}
+	return iter->second;
+}
+
+bool TaskType::isClosed(TaskState *state) const
+{
+	return mEndStates.find(state) != mEndStates.end();
+}
+
+/// Task
 
 Task::Task(std::string name)
 	:mName(name)
@@ -43,7 +186,7 @@ std::string Task::getDescription() const
 	return mDesc;
 }
 
-//TaskList.cpp
+/// TaskList
 
 void TaskList::addTask(Task *task)
 {
@@ -61,7 +204,7 @@ const std::vector<Task*> TaskList::all()
 	return mTasks;
 }
 
-unsigned int TaskList::getSize()
+unsigned int TaskList::getSize() const
 {
 	return mTasks.size();
 }

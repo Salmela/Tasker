@@ -24,6 +24,13 @@
 #include "backend.h"
 #include "cli.h"
 
+int main(int argc, char **argv)
+{
+	Cli cli(argc, argv);
+
+	return (int)!cli.mainLoop();
+}
+
 class CliException : public std::exception {
 public:
 	CliException(std::string message) {
