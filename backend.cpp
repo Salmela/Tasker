@@ -185,7 +185,8 @@ bool TaskType::isIncomplete() const
 /// Task
 
 Task::Task(Project *project, std::string name)
-	:mProject(project), mName(name)
+	:mProject(project), mName(name), mType(NULL),
+	mState(NULL), mClosed(false)
 {
 }
 
@@ -206,6 +207,9 @@ std::string Task::getDescription() const
 
 void Task::setType(TaskType *type)
 {
+	if(type->isIncomplete()) {
+		throw "Incomplete type";
+	}
 	mType = type;
 	mState = type->getStartState();
 }
@@ -213,6 +217,20 @@ void Task::setType(TaskType *type)
 TaskType *Task::getType() const
 {
 	return mType;
+}
+
+bool Task::setState(TaskState *newState)
+{
+	if(!mType->canChange(mState, newState)) {
+		return false;
+	}
+	mState = newState;
+	return true;
+}
+
+TaskState *Task::getState() const
+{
+	return mState;
 }
 
 /// TaskList

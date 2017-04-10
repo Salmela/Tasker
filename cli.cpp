@@ -155,12 +155,20 @@ void ModifyTaskTypeView::render(CliInterface *parent)
 {
 	auto *type = parent->getProject()->getType(mName);
 
-	if(type) {
+	if(!type) {
 		std::cout << "Creating new type '" << mName << "'\n";
 		type = new Backend::TaskType(parent->getProject(), mName);
+		auto state = Backend::TaskState::create("not-started");
+		type->setStartState(state);
+
+		auto endState = Backend::TaskState::create("done");
+		type->setEndStates({endState});
+
+		type->setTransition(state, endState);
 	} else {
 		std::cout << "Opening existing type '" << mName << "'\n";
 	}
+	parent->deleteView(this);
 }
 
 /// CreateListView
@@ -205,13 +213,14 @@ void TaskView::render(CliInterface *parent)
 	for(unsigned int i = 0; i < name.size(); i++) {
 		std::cout << "=";
 	}
+	std::cout << "\n[" << mTask->getState()->getName() << "]\n";
 	std::cout << "\n" << mTask->getDescription() << "\n";
 
 	std::cout << "Command> ";
 
 	std::string command;
 	std::getline(std::cin, command);
-	if (command == "e" || command == "exit") {
+	if(command == "e" || command == "exit") {
 		parent->deleteView(this);
 	}
 }

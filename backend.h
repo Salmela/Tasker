@@ -61,13 +61,14 @@ public:
 	Task(Project *project, std::string name);
 
 	void setName(std::string name);
-	std::string getName() const;
-	void setType(TaskType *type);
-	TaskType *getType() const;
-	bool setState(TaskState *state);
-	TaskState *getState() const;
 	void setDescription(std::string text);
+	void setType(TaskType *type);
+	bool setState(TaskState *state);
+
+	std::string getName() const;
 	std::string getDescription() const;
+	TaskType *getType() const;
+	TaskState *getState() const;
 
 	bool isClosed();
 private:
