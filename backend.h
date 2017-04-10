@@ -5,6 +5,9 @@
 #include <map>
 #include <set>
 
+namespace Tasker {
+namespace Backend {
+
 class Task;
 
 class TaskState
@@ -77,4 +80,20 @@ public:
 	unsigned int getSize() const;
 private:
 	std::vector<Task*> mTasks;
+};
+
+class Project
+{
+public:
+	static Project *create(const char *dirname);
+	static Project *open(const char *dirname);
+	TaskType *getType(std::string name);
+	TaskList *getTaskList();
+private:
+	Project();
+	std::map<std::string, TaskType*> *mTypes;
+	TaskList mList;
+};
+
+};
 };

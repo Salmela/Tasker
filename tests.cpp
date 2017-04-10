@@ -21,9 +21,11 @@
 
 #include "backend.h"
 
+namespace Tasker {
+
 /// TaskState
 bool createTaskState() {
-	TaskState *state = TaskState::create("test");
+	auto *state = Backend::TaskState::create("test");
 	state->ref();
 	state->unref();
 	bool res = (state && "test" == state->getName());
@@ -32,13 +34,13 @@ bool createTaskState() {
 }
 
 bool createTaskStateAndDelete() {
-	TaskState *state = TaskState::create("test");
+	auto *state = Backend::TaskState::create("test");
 	state->free();
 	return true;
 }
 
 bool createRefTaskStateAndDelete() {
-	TaskState *state = TaskState::create("test");
+	auto *state = Backend::TaskState::create("test");
 	state->ref();
 	state->free();
 	bool res = (state && "test" == state->getName());
@@ -49,10 +51,10 @@ bool createRefTaskStateAndDelete() {
 /// TaskType
 
 bool createTaskTypeAndDelete() {
-	TaskType type("test");
+	Backend::TaskType type("test");
 
-	TaskState *state = TaskState::create("start");
-	TaskState *endState = TaskState::create("end");
+	auto *state = Backend::TaskState::create("start");
+	auto *endState = Backend::TaskState::create("end");
 
 	type.setStartState(state);
 	type.setEndStates({endState});
@@ -75,8 +77,8 @@ bool createTaskTypeAndDelete() {
 /// TaskList
 
 bool addAndRemoveTask() {
-	TaskList list;
-	Task *task = new Task("test");
+	Backend::TaskList list;
+	auto *task = new Backend::Task("test");
 
 	list.addTask(task);
 	list.removeTask(task);
@@ -86,7 +88,7 @@ bool addAndRemoveTask() {
 	return list.getSize() == 0;
 }
 
-int main(int argc, char **argv)
+int testMain()
 {
 	bool success;
 	success = createTaskState();
@@ -102,4 +104,11 @@ int main(int argc, char **argv)
 	success = addAndRemoveTask();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	return 0;
+}
+
+};
+
+int main(int argc, char **argv)
+{
+	return Tasker::testMain();
 }

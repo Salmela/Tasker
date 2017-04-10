@@ -22,6 +22,9 @@
 
 #include "backend.h"
 
+namespace Tasker {
+namespace Backend {
+
 /// TaskState
 TaskState::TaskState(std::string name)
 	:mName(name)
@@ -208,3 +211,33 @@ unsigned int TaskList::getSize() const
 {
 	return mTasks.size();
 }
+
+/// Project
+
+Project *Project::create(const char *dirname)
+{
+	return new Project();
+}
+
+Project *Project::open(const char *dirname)
+{
+	return new Project();
+}
+
+Project::Project()
+{
+}
+
+TaskType *Project::getType(std::string name)
+{
+	auto iter = mTypes->find(name);
+	return (iter != mTypes->end()) ? iter->second : NULL;
+}
+
+TaskList *Project::getTaskList()
+{
+	return &mList;
+}
+
+};
+};

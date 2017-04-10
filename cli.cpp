@@ -27,10 +27,13 @@
 
 int main(int argc, char **argv)
 {
-	Cli cli(argc, argv);
+	Tasker::Cli::Main cli(argc, argv);
 
 	return (int)!cli.mainLoop();
 }
+
+namespace Tasker {
+namespace Cli {
 
 class CliException : public std::exception {
 public:
@@ -48,18 +51,19 @@ private:
 	const char *mMessage;
 };
 
-Cli::Cli(int argc, char **argv)
-	:mListView(&mList)
+Main::Main(int argc, char **argv)
+	:mListView()
 {
+	project = Backend::Project::open("./");
 	newView(&mListView);
 }
 
-void Cli::newView(View *view)
+void Main::newView(View *view)
 {
 	mViewStack.push_back(view);
 }
 
-void Cli::deleteView(View *view)
+void Main::deleteView(View *view)
 {
 	if (mViewStack.back() != view) {
 		throw CliException("You can only delete the top item");
@@ -68,7 +72,7 @@ void Cli::deleteView(View *view)
 	mViewStack.pop_back();
 }
 
-bool Cli::mainLoop()
+bool Main::mainLoop()
 {
 	while(!mViewStack.empty()) {
 		View *activeView = getActiveView();
@@ -77,25 +81,21 @@ bool Cli::mainLoop()
 	return true;
 }
 
-View *Cli::getActiveView()
+View *Main::getActiveView()
 {
 	return mViewStack.back();
 }
 
-TaskList *Cli::getTaskList()
+Backend::Project *Main::getProject()
 {
-	return &mList;
+	return project;
 }
 
-//TaskListView.cpp
-
-TaskListView::TaskListView(TaskList *list)
-{
-	mList = list;
-}
+/// TaskListView
 
 void TaskListView::render(CliInterface *parent)
 {
+	auto *mList = parent->getProject()->getTaskList();
 	std::cout << "Task list:\n";
 
 	if (mList->getSize() == 0) {
@@ -103,7 +103,7 @@ void TaskListView::render(CliInterface *parent)
 	}
 
 	unsigned int i = 1;
-	for (Task *t : mList->all()) {
+	for (Backend::Task *t : mList->all()) {
 		std::cout << " " << i++ << ". " << t->getName() << "\n";
 	}
 	std::cout << "Command> ";
@@ -149,14 +149,14 @@ void CreateTaskView::render(CliInterface *parent)
 	std::cout << "\n";
 	//TODO handle type
 
-	Task *task = new Task(name);
-	parent->getTaskList()->addTask(task);
+	auto *task = new Backend::Task(name);
+	parent->getProject()->getTaskList()->addTask(task);
 	parent->deleteView(this);
 	parent->newView(new TaskView(task));
 }
 
 //TaskView.cpp
-TaskView::TaskView(Task *task)
+TaskView::TaskView(Backend::Task *task)
 {
 	mTask = task;
 }
@@ -178,3 +178,6 @@ void TaskView::render(CliInterface *parent)
 		parent->deleteView(this);
 	}
 }
+
+};
+};
