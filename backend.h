@@ -9,7 +9,9 @@ namespace Tasker {
 namespace Backend {
 
 class Task;
+class Project;
 
+/* The task state should be feature of TaskType */
 class TaskState
 {
 public:
@@ -31,20 +33,24 @@ private:
 class TaskType
 {
 public:
-	TaskType(std::string name);
+	TaskType(Project *project, std::string name);
 	void rename(std::string newName);
 	std::string getName() const;
 	void setStartState(TaskState *state);
+	TaskState *getStartState() const;
 	void setEndStates(std::set<TaskState*> states);
 	void setTransition(TaskState *from, TaskState *to, bool create = true);
 
 	bool canChange(TaskState *from, TaskState *to) const;
 	const std::set<TaskState*> possibleChanges(TaskState *from) const;
 	bool isClosed(TaskState *state) const;
+	bool isIncomplete() const;
 
 private:
-	std::string  mName;
-	TaskState   *mStartState;
+	Project *mProject;
+	std::string mName;
+	TaskState *mStartState;
+	bool mIsDeleted;
 	std::set<TaskState*> mEndStates;
 	std::map<TaskState*, std::set<TaskState*> > mStateMap;
 };
@@ -52,10 +58,12 @@ private:
 class Task
 {
 public:
-	Task(std::string name);
+	Task(Project *project, std::string name);
 
 	void setName(std::string name);
 	std::string getName() const;
+	void setType(TaskType *type);
+	TaskType *getType() const;
 	bool setState(TaskState *state);
 	TaskState *getState() const;
 	void setDescription(std::string text);
@@ -63,12 +71,14 @@ public:
 
 	bool isClosed();
 private:
+	Project *mProject;
 	std::string mName;
 	std::string mDesc;
+	TaskType *mType;
 	TaskState *mState;
 	bool mClosed;
 
-	std::vector<Task> mSubTask;
+	std::vector<Task*> mSubTask;
 };
 
 class TaskList
@@ -87,12 +97,15 @@ class Project
 public:
 	static Project *create(const char *dirname);
 	static Project *open(const char *dirname);
+
+	Project(); //< open for tests
 	TaskType *getType(std::string name);
 	TaskList *getTaskList();
 private:
-	Project();
-	std::map<std::string, TaskType*> *mTypes;
+	std::map<std::string, TaskType*> mTypes;
 	TaskList mList;
+
+	friend TaskType;
 };
 
 };

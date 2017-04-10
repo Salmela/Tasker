@@ -23,6 +23,15 @@
 
 namespace Tasker {
 
+bool createProject() {
+	auto *project = Backend::Project::create("./");
+	bool res = project->getTaskList();
+	res &= !project->getType("xyz");
+	delete project;
+
+	return res;
+}
+
 /// TaskState
 bool createTaskState() {
 	auto *state = Backend::TaskState::create("test");
@@ -51,7 +60,7 @@ bool createRefTaskStateAndDelete() {
 /// TaskType
 
 bool createTaskTypeAndDelete() {
-	Backend::TaskType type("test");
+	Backend::TaskType type(NULL, "test");
 
 	auto *state = Backend::TaskState::create("start");
 	auto *endState = Backend::TaskState::create("end");
@@ -67,9 +76,22 @@ bool createTaskTypeAndDelete() {
 	res &= ends.size() == 1;
 	res &= ends.find(endState) != ends.end();
 	res &= type.isClosed(endState);
+	res &= !type.isIncomplete();
 
 	delete state;
 	delete endState;
+
+	return res;
+}
+
+bool createTaskTypeForProject() {
+	Backend::Project project;
+
+	auto *type = new Backend::TaskType(&project, "test");
+
+	bool res = project.getType("test") == type;
+
+	delete type;
 
 	return res;
 }
@@ -78,7 +100,7 @@ bool createTaskTypeAndDelete() {
 
 bool addAndRemoveTask() {
 	Backend::TaskList list;
-	auto *task = new Backend::Task("test");
+	auto *task = new Backend::Task(NULL, "test");
 
 	list.addTask(task);
 	list.removeTask(task);
@@ -91,6 +113,10 @@ bool addAndRemoveTask() {
 int testMain()
 {
 	bool success;
+
+	success = createProject();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+
 	success = createTaskState();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = createTaskStateAndDelete();
@@ -99,6 +125,8 @@ int testMain()
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	success = createTaskTypeAndDelete();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = createTaskTypeForProject();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	success = addAndRemoveTask();

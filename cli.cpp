@@ -123,7 +123,9 @@ void TaskListView::render(CliInterface *parent)
 
 	if (command == "o" || command == "open") {
 		int taskIndex;
-		std::cin >> taskIndex;
+		std::istringstream iss(args[0]);
+		iss >> taskIndex;
+
 		if (taskIndex < 1 && taskIndex > (int)mList->getSize()) {
 			std::cerr << "Task index is out-of-bounds.\n";
 			return;
@@ -131,8 +133,33 @@ void TaskListView::render(CliInterface *parent)
 		parent->newView(new TaskView(mList->all()[taskIndex - 1]));
 	} else if (command == "n" || command == "new") {
 		parent->newView(new CreateTaskView());
+	} else if (command == "t" || command == "type") {
+		if (args.size() != 1) {
+			std::cout << "USAGE: type NAME\n";
+			return;
+		}
+		parent->newView(new ModifyTaskTypeView(args[0]));
 	} else if (command == "q" || command == "quit") {
 		parent->deleteView(this);
+	}
+}
+
+/// ModifyTaskTypeView
+
+ModifyTaskTypeView::ModifyTaskTypeView(std::string name)
+{
+	mName = name;
+}
+
+void ModifyTaskTypeView::render(CliInterface *parent)
+{
+	auto *type = parent->getProject()->getType(mName);
+
+	if(type) {
+		std::cout << "Creating new type '" << mName << "'\n";
+		type = new Backend::TaskType(parent->getProject(), mName);
+	} else {
+		std::cout << "Opening existing type '" << mName << "'\n";
 	}
 }
 
@@ -147,9 +174,19 @@ void CreateTaskView::render(CliInterface *parent)
 	std::cout << "Type: ";
 	std::getline(std::cin, type);
 	std::cout << "\n";
-	//TODO handle type
 
-	auto *task = new Backend::Task(name);
+	auto *prj = parent->getProject();
+	auto *task_type = prj->getType(type);
+	if(!task_type) {
+		// TODO implement recomendations
+		std::cerr << "Type is unknown.\n";
+		parent->deleteView(this);
+		return;
+	}
+
+	auto *task = new Backend::Task(prj, name);
+	task->setType(task_type);
+
 	parent->getProject()->getTaskList()->addTask(task);
 	parent->deleteView(this);
 	parent->newView(new TaskView(task));
@@ -173,7 +210,7 @@ void TaskView::render(CliInterface *parent)
 	std::cout << "Command> ";
 
 	std::string command;
-	std::cin >> command;
+	std::getline(std::cin, command);
 	if (command == "e" || command == "exit") {
 		parent->deleteView(this);
 	}

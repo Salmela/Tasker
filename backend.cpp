@@ -79,9 +79,12 @@ void TaskState::free()
 
 /// TaskType
 
-TaskType::TaskType(std::string name)
-	:mName(name), mStartState(NULL)
+TaskType::TaskType(Project *project, std::string name)
+	:mProject(project), mName(name), mStartState(NULL)
 {
+	if(project) {
+		project->mTypes[name] = this;
+	}
 }
 
 void TaskType::rename(std::string newName)
@@ -92,6 +95,11 @@ void TaskType::rename(std::string newName)
 std::string TaskType::getName() const
 {
 	return mName;
+}
+
+TaskState *TaskType::getStartState() const
+{
+	return mStartState;
 }
 
 void TaskType::setStartState(TaskState *state)
@@ -167,10 +175,17 @@ bool TaskType::isClosed(TaskState *state) const
 	return mEndStates.find(state) != mEndStates.end();
 }
 
+bool TaskType::isIncomplete() const
+{
+	if(!mStartState) return true;
+	if(mEndStates.size() == 0) return true;
+	return false;
+}
+
 /// Task
 
-Task::Task(std::string name)
-	:mName(name)
+Task::Task(Project *project, std::string name)
+	:mProject(project), mName(name)
 {
 }
 
@@ -187,6 +202,17 @@ std::string Task::getName() const
 std::string Task::getDescription() const
 {
 	return mDesc;
+}
+
+void Task::setType(TaskType *type)
+{
+	mType = type;
+	mState = type->getStartState();
+}
+
+TaskType *Task::getType() const
+{
+	return mType;
 }
 
 /// TaskList
@@ -230,8 +256,8 @@ Project::Project()
 
 TaskType *Project::getType(std::string name)
 {
-	auto iter = mTypes->find(name);
-	return (iter != mTypes->end()) ? iter->second : NULL;
+	auto iter = mTypes.find(name);
+	return (iter != mTypes.end()) ? iter->second : NULL;
 }
 
 TaskList *Project::getTaskList()

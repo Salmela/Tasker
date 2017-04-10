@@ -19,6 +19,15 @@ public:
 	virtual void render(CliInterface *parent) = 0;
 };
 
+class ModifyTaskTypeView : public View
+{
+public:
+	ModifyTaskTypeView(std::string name);
+	void render(CliInterface *parent) override;
+private:
+	std::string mName;
+};
+
 class TaskView : public View
 {
 public:
