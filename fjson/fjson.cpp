@@ -111,6 +111,10 @@ void Reader::parseNumber()
 	}
 }
 
+void Reader::parseString()
+{
+}
+
 int Reader::tokenize()
 {
 	//TODO skip whitespaces
@@ -132,26 +136,30 @@ int Reader::tokenize()
 		return c;
 	case '\"':
 		mToken.type = STRING;
+		mStream.unget();
+		parseString();
 		break;
 	case ',':
 		break;
 	case 't':
 		mToken.type = BOOLEAN;
-		mStream.get(buf + 1, 3);
+		mToken.value.boolean = true;
+		mStream.get(buf + 1, 4);
 		if(memcmp(buf, "true", 4) != 0) {
 			throw "invalid token";
 		}
 		break;
 	case 'f':
 		mToken.type = BOOLEAN;
-		mStream.get(buf + 1, 4);
+		mToken.value.boolean = false;
+		mStream.get(buf + 1, 5);
 		if(memcmp(buf, "false", 5) != 0) {
 			throw "invalid token";
 		}
 		break;
 	case 'n':
 		mToken.type = NUL;
-		mStream.get(buf + 1, 3);
+		mStream.get(buf + 1, 4);
 		if(memcmp(buf, "null", 4) != 0) {
 			throw "invalid token";
 		}
@@ -179,6 +187,12 @@ void Reader::expect(int expected)
 
 void Reader::read(bool &value)
 {
+	tokenize();
+	if(mToken.type == BOOLEAN) {
+		value = (int)mToken.value.boolean;
+	} else {
+		std::cerr << "Expected boolean.\n";
+	}
 }
 
 void Reader::read(int &value)
@@ -198,6 +212,13 @@ void Reader::read(unsigned int &value)
 
 void Reader::read(float &value)
 {
+	double tmp;
+	read(tmp);
+	value = tmp;
+}
+
+void Reader::read(double &value)
+{
 	tokenize();
 	if(mToken.type == REAL) {
 		value = mToken.value.real;
@@ -208,13 +229,16 @@ void Reader::read(float &value)
 	}
 }
 
-void Reader::read(double &value)
-{
-	value = 0.0;
-}
-
 void Reader::read(std::string &value)
 {
+	tokenize();
+	if(mToken.type == STRING) {
+		value = mToken.string;
+	} else if(mToken.type == NUL) {
+		value = "";
+	} else {
+		std::cerr << "Expected string.\n";
+	}
 }
 
 void Reader::startObject()

@@ -51,6 +51,7 @@ private:
 	long parseLong(int c);
 	double fast10pow(long exp);
 	void parseNumber();
+	void parseString();
 };
 
 class Writer {

@@ -72,7 +72,7 @@ static bool readFloat()
 #define cmp(x, y) \
 	createReader(x); \
 	json->read(val); \
-	res &= (abs(val - (y)) < 0.0001);
+	res &= (abs(val - (y)) < 1e-323);
 
 	cmp("0", 0.0);
 	cmp("1", 1.0);
@@ -95,7 +95,38 @@ static bool readFloat()
 
 static bool readString()
 {
-	return true;
+	bool res = true;
+	std::string val;
+
+#define cmp(x, y) \
+	createReader("\"" x "\""); \
+	json->read(val); \
+	res &= (val == y);
+
+	cmp("a", "a");
+#undef cmp
+	return res;
+}
+
+static bool readMisc()
+{
+	bool res = true;
+	std::string val;
+	bool valBool;
+
+	createReader("null");
+	json->read(val);
+	res &= (val == "");
+
+	createReader("false");
+	json->read(valBool);
+	res &= (valBool == false);
+
+	createReader("true");
+	json->read(valBool);
+	res &= (valBool == true);
+
+	return res;
 }
 
 int main(int argc, char **argv)
@@ -109,6 +140,8 @@ int main(int argc, char **argv)
 	success = readFloat();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = readString();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = readMisc();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	delete json;
