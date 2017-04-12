@@ -20,6 +20,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <cmath>
 #include "fjson.h"
 
 using namespace FJson;
@@ -72,9 +73,10 @@ static bool readFloat()
 #define cmp(x, y) \
 	createReader(x); \
 	json->read(val); \
-	res &= (abs(val - (y)) < 1e-323);
+	res &= (fabs(val - (y)) < 1e-8);
 
 	cmp("0", 0.0);
+	cmp("-0", 0.0);
 	cmp("1", 1.0);
 	cmp("-1", -1.0);
 	cmp("0.5", 0.5);
@@ -145,9 +147,27 @@ static bool readMisc()
 static bool readArray()
 {
 	bool res = true;
+	int value;
 
 	createReader("null");
 	json->startArray();
+	res &= (json->hasNextElement() == false);
+
+	createReader("[1]");
+	json->startArray();
+	res &= (json->hasNextElement() == true);
+	json->read(value);
+	res &= (value == 1);
+	res &= (json->hasNextElement() == false);
+
+	createReader("[1,2]");
+	json->startArray();
+	res &= (json->hasNextElement() == true);
+	json->read(value);
+	res &= (value == 1);
+	res &= (json->hasNextElement() == true);
+	json->read(value);
+	res &= (value == 2);
 	res &= (json->hasNextElement() == false);
 
 	return res;

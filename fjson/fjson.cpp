@@ -26,6 +26,8 @@ namespace FJson {
 Reader::Reader(std::istream &stream)
 	:mStream(stream)
 {
+	mStackSize = 0;
+	afterStartBracket = false;
 	tokenize();
 }
 
@@ -55,6 +57,7 @@ double Reader::fast10pow(long exp) {
 	//modular exponiation algorithm
 	double res = 1.0;
 	double base = (exp > 0) ? 10.0 : 0.1;
+	exp = abs(exp);
 
 	while(exp > 0) {
 		if((exp & 1) == 1) {
@@ -91,7 +94,7 @@ void Reader::parseNumber()
 		fValue = value;
 		c = mStream.get();
 		while(isAsciiDigit(c)) {
-			value += mul * (c - '0');
+			fValue += mul * (c - '0');
 			c = mStream.get();
 			if(!isAsciiDigit(c))
 				break;
@@ -107,6 +110,7 @@ void Reader::parseNumber()
 			fValue = value;
 		}
 		isFloat = true;
+		c = mStream.get();
 		if(c == '+') {
 			c = mStream.get();
 		} else if(c == '-') {
@@ -115,8 +119,8 @@ void Reader::parseNumber()
 		}
 		long exp = eSign * parseLong(c);
 		fValue = fValue * fast10pow(exp);
-
-		fValue *= sign;
+	} else {
+		mStream.unget();
 	}
 
 	if(!isFloat) {
@@ -124,6 +128,7 @@ void Reader::parseNumber()
 		mToken.value.integer = value;
 		mToken.type = INTEGER;
 	} else {
+		fValue *= sign;
 		mToken.value.real = fValue;
 		mToken.type = REAL;
 	}
@@ -223,19 +228,24 @@ int Reader::tokenize()
 		mToken.type = OBJECT;
 		break;
 	case '}':
+		mToken.type = END_OBJECT;
 		break;
 	case '[':
 		mToken.type = ARRAY;
 		break;
 	case ']':
+		mToken.type = END_ARRAY;
+		break;
 	case ':':
-		return c;
+		mToken.type = COLON;
+		break;
 	case '\"':
 		mToken.type = STRING;
 		mStream.unget();
 		parseString();
 		break;
 	case ',':
+		mToken.type = SEPARATOR;
 		break;
 	case 't':
 		mToken.type = BOOLEAN;
@@ -261,6 +271,7 @@ int Reader::tokenize()
 		}
 		break;
 	case -1:
+		mToken.type = END;
 		break;
 	default:
 		if(c == '-' || isAsciiDigit(c)) {
@@ -333,7 +344,11 @@ void Reader::read(std::string &value)
 void Reader::startObject()
 {
 	if(mToken.type == NUL) {
+		mStack[mStackSize++] = 'O';
+		return;
 	} else if(mToken.type == OBJECT) {
+		mStack[mStackSize++] = '{';
+		afterStartBracket = true;
 	} else {
 		std::cerr << "Expected object.\n";
 	}
@@ -342,13 +357,44 @@ void Reader::startObject()
 
 bool Reader::readObjectKey(std::string &key)
 {
-	return false;
+	char c = mStack[mStackSize - 1];
+	if(c == 'O') {
+		return false;
+	} else if(c != '{') {
+		throw "Mismatching brackets";
+	}
+	bool res;
+	if(mToken.type == END_OBJECT) {
+		res = false;
+		mStackSize--;
+	} else if(afterStartBracket || mToken.type == SEPARATOR) {
+		res = true;
+		if(!afterStartBracket) {
+			tokenize();
+			afterStartBracket = false;
+		}
+		read(key);
+		if(mToken.type != COLON) {
+			throw "Expected ':'";
+		}
+		if(afterStartBracket) {
+			return true;
+		}
+	} else {
+		throw "Expected '}' or ',' character.";
+	}
+	tokenize();
+	return res;
 }
 
 void Reader::startArray()
 {
 	if(mToken.type == NUL) {
+		mStack[mStackSize++] = 'A';
+		return;
 	} else if(mToken.type == ARRAY) {
+		mStack[mStackSize++] = '[';
+		afterStartBracket = true;
 	} else {
 		std::cerr << "Expected array.\n";
 	}
@@ -357,15 +403,28 @@ void Reader::startArray()
 
 bool Reader::hasNextElement()
 {
-	//TODO properly handle start element
-
-	//if(token == ']') {
-	//	return false;
-	//} else if(token == ',') {
-	//	return true;
-	//}
+	char c = mStack[mStackSize - 1];
+	if(c == 'A') {
+		return false;
+	} else if(c != '[') {
+		throw "Mismatching brackets";
+	}
+	bool res;
+	if(mToken.type == ARRAY) {
+		return true;
+	} else if(mToken.type == END_ARRAY) {
+		mStackSize--;
+		res = false;
+	} else if(mToken.type == SEPARATOR) {
+		res = true;
+	} else if(afterStartBracket) {
+		afterStartBracket = false;
+		return true;
+	} else {
+		throw "Expected ']' or ',' character.";
+	}
 	tokenize();
-	return false;
+	return res;
 }
 
 

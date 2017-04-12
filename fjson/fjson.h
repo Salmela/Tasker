@@ -13,7 +13,11 @@ enum TokenType {
 	REAL,
 	OBJECT,
 	ARRAY,
-	SEPARATOR
+	END_OBJECT,
+	END_ARRAY,
+	SEPARATOR,
+	COLON,
+	END
 };
 
 struct Token {
@@ -45,6 +49,10 @@ public:
 private:
 	std::istream &mStream;
 	Token mToken;
+	bool afterStartBracket;
+
+	int mStackSize;
+	char mStack[128];//list of '{' or '[' or 'A' or 'O' characters
 
 	int tokenize();
 	long parseLong(int c);
