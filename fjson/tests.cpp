@@ -104,6 +104,19 @@ static bool readString()
 	res &= (val == y);
 
 	cmp("a", "a");
+	cmp("ä", "ä");
+	cmp("\\n", "\n");
+	cmp("\\t", "\t");
+	cmp("\\\"", "\"");
+	cmp("\\\\", "\\");
+	cmp("a\\nb", "a\nb");
+	cmp("ä\\nb", "ä\nb");
+	cmp("a\\\"", "a\"");
+	cmp("a\\\"b\\\"", "a\"b\"");
+	cmp("\\u0034", "\u0034");
+	cmp("\\u00e4", "\u00e4");
+	cmp("\\u08e4", "\u08e4");
+	cmp("\\u23e4", "\u23e4");
 #undef cmp
 	return res;
 }

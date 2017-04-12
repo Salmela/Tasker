@@ -14,7 +14,7 @@ The following list were my *must have*s:
    * Pretty printing
    * Tiny memory footprint
  * Both
-   * Unicode support
+   * Unicode support (UTF8)
    * Remembering foreign keys (allows forward compatibility)
    * No dependencies to external libraries
    * Small library

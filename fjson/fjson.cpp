@@ -1,10 +1,27 @@
+/* FJson reader and writer.
+ *
+ * Copyright (C) 2017 Aleksi Salmela
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor,
+ * Boston, MA 02110-1301, USA.
+ */
+#include <sstream>
 #include <string.h>
 #include "fjson.h"
 
 namespace FJson {
-
-enum tokens {
-};
 
 Reader::Reader(std::istream &stream)
 	:mStream(stream)
@@ -111,8 +128,86 @@ void Reader::parseNumber()
 	}
 }
 
+void Reader::generateUtf8(std::ostream &builder, int value)
+{
+	if(value < 0x80) {
+		builder << (char)value;
+	} else if(value < 0x800) {
+		builder << (char)(0xc0 | (value >> 6 & 0x1f));
+		builder << (char)(0x80 | (value & 0x3f));
+	} else if(value < 0x10000) {
+		builder << (char)(0xe0 | (value >> 12 & 0x0f));
+		builder << (char)(0x80 | (value >> 6 & 0x3f));
+		builder << (char)(0x80 | (value & 0x3f));
+	} else if(value < 0x110000) {
+		builder << (char)(0xf0 | (value >> 18 & 0x07));
+		builder << (char)(0x80 | (value >> 12 & 0x3f));
+		builder << (char)(0x80 | (value >> 6 & 0x3f));
+		builder << (char)(0x80 | (value & 0x3f));
+	} else {
+		throw "Invalid unicode character";
+	}
+}
+
 void Reader::parseString()
 {
+	int c = mStream.get();
+	if(c != '\"') {
+		throw "expected '\"'(quote)";
+	}
+
+	std::ostringstream builder;
+	c = mStream.get();
+	do {
+		//TODO we should validate utf8 multi-byte characters
+		if(c == '\\') {
+			c = mStream.get();
+			switch(c) {
+			case '\"':
+			case '\\':
+			case '/':
+				break;
+			case 'b':
+				c = '\b';
+				break;
+			case 'f':
+				c = '\f';
+				break;
+			case 'n':
+				c = '\n';
+				break;
+			case 'r':
+				c = '\r';
+				break;
+			case 't':
+				c = '\t';
+				break;
+			case 'u': {
+				char buf[5];
+				mStream.get(buf, 5);
+				int val = strtol(buf, NULL, 16);
+				generateUtf8(builder, val);
+				c = -1;
+				break;
+			}
+			default:
+				throw "invalid escape sequence";
+			}
+
+			if(c != -1) {
+				builder << (char)c;
+			}
+		} else {
+			builder << (char)c;
+		}
+		c = mStream.get();
+	} while(c != '\"' && c != -1);
+
+	mToken.string = builder.str();
+
+	if(c != '\"') {
+		throw "expected '\"'(quote)";
+	}
 }
 
 int Reader::tokenize()

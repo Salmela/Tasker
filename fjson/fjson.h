@@ -52,6 +52,7 @@ private:
 	double fast10pow(long exp);
 	void parseNumber();
 	void parseString();
+	void generateUtf8(std::ostream &builder, int value);
 };
 
 class Writer {
