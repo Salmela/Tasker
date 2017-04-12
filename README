@@ -1,4 +1,34 @@
 Tasker
-==========
+======
 
 This projects goal is to create simple task management software.
+It stores all data in json files and uses git for tracking
+the changes.
+
+The data is stored in following directory structure:
+ * tasks
+   * task #1
+   * ...
+ * types
+   * task type #1
+   * ...
+ * users
+   * user #1
+   * ...
+ * remotes
+ * tasker.conf <-- configuration file
+
+
+Why json?
+=========
+
+Json is simple way to store data. It can be extendable with still
+being backwards and forwards compatible.  Json is also human-
+readable so you can always read the data with text editor and
+possibly fix corruption or bug by manually editing the text
+file.
+
+Why git?
+========
+
+

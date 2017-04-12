@@ -1,0 +1,21 @@
+Why new json library?
+=====================
+
+I couldn't find any json library that would fit my needs.
+
+The following list were my *must have*s:
+ * Parser
+   * Fast parsing
+   * Tiny memory footprint
+   * No DOM
+   * Storing the data to actual c++ classes with help of application code
+   * Nice error reporting automatically
+ * Writer
+   * Pretty printing
+   * Tiny memory footprint
+ * Both
+   * Unicode support
+   * Remembering foreign keys (allows forward compatibility)
+   * No dependencies to external libraries
+   * Small library
+   * Simple api
