@@ -142,6 +142,29 @@ static bool readMisc()
 	return res;
 }
 
+static bool readArray()
+{
+	bool res = true;
+
+	createReader("null");
+	json->startArray();
+	res &= (json->hasNextElement() == false);
+
+	return res;
+}
+
+static bool readObject()
+{
+	bool res = true;
+	std::string key;
+
+	createReader("null");
+	json->startObject();
+	res &= (json->readObjectKey(key) == false);
+
+	return res;
+}
+
 int main(int argc, char **argv)
 {
 	bool success;
@@ -155,6 +178,10 @@ int main(int argc, char **argv)
 	success = readString();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = readMisc();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = readArray();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = readObject();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	delete json;

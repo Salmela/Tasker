@@ -26,6 +26,7 @@ namespace FJson {
 Reader::Reader(std::istream &stream)
 	:mStream(stream)
 {
+	tokenize();
 }
 
 #define isAsciiDigit(c) ((c) >= '0' && (c) <= '9')
@@ -259,6 +260,8 @@ int Reader::tokenize()
 			throw "invalid token";
 		}
 		break;
+	case -1:
+		break;
 	default:
 		if(c == '-' || isAsciiDigit(c)) {
 			mStream.unget();
@@ -271,33 +274,24 @@ int Reader::tokenize()
 	return 0;
 }
 
-void Reader::expect(int expected)
-{
-	int token = tokenize();
-	if(token != expected) {
-		std::cerr << "Expected '" << (char)expected << "', received '" << (char)token << "'\n";
-		abort();//TODO throw exception
-	}
-}
-
 void Reader::read(bool &value)
 {
-	tokenize();
 	if(mToken.type == BOOLEAN) {
 		value = (int)mToken.value.boolean;
 	} else {
 		std::cerr << "Expected boolean.\n";
 	}
+	tokenize();
 }
 
 void Reader::read(int &value)
 {
-	tokenize();
 	if(mToken.type == INTEGER) {
 		value = (int)mToken.value.integer;
 	} else {
 		std::cerr << "Expected integer.\n";
 	}
+	tokenize();
 }
 
 void Reader::read(unsigned int &value)
@@ -314,7 +308,6 @@ void Reader::read(float &value)
 
 void Reader::read(double &value)
 {
-	tokenize();
 	if(mToken.type == REAL) {
 		value = mToken.value.real;
 	} else if(mToken.type == INTEGER) {
@@ -322,11 +315,11 @@ void Reader::read(double &value)
 	} else {
 		std::cerr << "Expected floating point number.\n";
 	}
+	tokenize();
 }
 
 void Reader::read(std::string &value)
 {
-	tokenize();
 	if(mToken.type == STRING) {
 		value = mToken.string;
 	} else if(mToken.type == NUL) {
@@ -334,11 +327,17 @@ void Reader::read(std::string &value)
 	} else {
 		std::cerr << "Expected string.\n";
 	}
+	tokenize();
 }
 
 void Reader::startObject()
 {
-	expect('{');
+	if(mToken.type == NUL) {
+	} else if(mToken.type == OBJECT) {
+	} else {
+		std::cerr << "Expected object.\n";
+	}
+	tokenize();
 }
 
 bool Reader::readObjectKey(std::string &key)
@@ -348,18 +347,24 @@ bool Reader::readObjectKey(std::string &key)
 
 void Reader::startArray()
 {
-	expect('[');
+	if(mToken.type == NUL) {
+	} else if(mToken.type == ARRAY) {
+	} else {
+		std::cerr << "Expected array.\n";
+	}
+	tokenize();
 }
 
 bool Reader::hasNextElement()
 {
 	//TODO properly handle start element
-	int token = tokenize();
-	if(token == ']') {
-		return false;
-	} else if(token == ',') {
-		return true;
-	}
+
+	//if(token == ']') {
+	//	return false;
+	//} else if(token == ',') {
+	//	return true;
+	//}
+	tokenize();
 	return false;
 }
 

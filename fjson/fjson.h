@@ -46,7 +46,6 @@ private:
 	std::istream &mStream;
 	Token mToken;
 
-	void expect(int expected);
 	int tokenize();
 	long parseLong(int c);
 	double fast10pow(long exp);
