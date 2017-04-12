@@ -153,6 +153,10 @@ static bool readArray()
 	json->startArray();
 	res &= (json->hasNextElement() == false);
 
+	createReader("[]");
+	json->startArray();
+	res &= (json->hasNextElement() == false);
+
 	createReader("[1]");
 	json->startArray();
 	res &= (json->hasNextElement() == true);
@@ -182,12 +186,70 @@ static bool readObject()
 	json->startObject();
 	res &= (json->readObjectKey(key) == false);
 
+	createReader("{}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == false);
+
+	createReader("{\"test\":4}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	int val;
+	json->read(val);
+	res &= (val == 4);
+	res &= (json->readObjectKey(key) == false);
+
+	createReader("{\"test\":4, \"unit\": 2}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->read(val);
+	res &= (val == 4);
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "unit");
+	json->read(val);
+	res &= (val == 2);
+	res &= (json->readObjectKey(key) == false);
+
+	return res;
+}
+
+static bool readMixed()
+{
+	std::string key;
+	bool res = true;
+	int val;
+
+	createReader("{\"test\": [1, 2, 3], \"unit\": 2}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->startArray();
+	res &= (json->hasNextElement() == true);
+	json->read(val);
+	res &= (val == 1);
+	res &= (json->hasNextElement() == true);
+	json->read(val);
+	res &= (val == 2);
+	res &= (json->hasNextElement() == true);
+	json->read(val);
+	res &= (val == 3);
+	res &= (json->hasNextElement() == false);
+
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "unit");
+	json->read(val);
+	res &= (val == 2);
+	res &= (json->readObjectKey(key) == false);
+
 	return res;
 }
 
 int main(int argc, char **argv)
 {
 	bool success;
+
+	std::cout << "Read tests\n";
 
 	success = initialization();
 	std::cout << (success ? "Success" : "Failure") << "\n";
@@ -202,6 +264,8 @@ int main(int argc, char **argv)
 	success = readArray();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = readObject();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = readMixed();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	delete json;

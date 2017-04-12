@@ -220,7 +220,10 @@ int Reader::tokenize()
 {
 	//TODO skip whitespaces
 	char buf[10];
-	int c = mStream.get();
+	int c;
+	do {
+		c = mStream.get();
+	} while(c == ' ' || c == '\t' || c == '\n' || c == '\r');
 	buf[0] = c;
 
 	switch(c) {
@@ -371,14 +374,11 @@ bool Reader::readObjectKey(std::string &key)
 		res = true;
 		if(!afterStartBracket) {
 			tokenize();
-			afterStartBracket = false;
 		}
+		afterStartBracket = false;
 		read(key);
 		if(mToken.type != COLON) {
 			throw "Expected ':'";
-		}
-		if(afterStartBracket) {
-			return true;
 		}
 	} else {
 		throw "Expected '}' or ',' character.";
