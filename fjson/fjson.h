@@ -20,6 +20,12 @@ enum TokenType {
 	END
 };
 
+enum State {
+	S_START,//< after Object or Array start token
+	S_VALUE,//< after Value is written
+	S_SEPARATOR//< after Object or Array separator
+};
+
 struct Token {
 	TokenType type;
 	std::string string;
@@ -66,6 +72,7 @@ class Writer {
 public:
 	Writer(std::ostream &stream);
 
+	void write(void *value);
 	void write(bool value);
 	void write(int value);
 	void write(unsigned int value);
@@ -79,7 +86,9 @@ public:
 
 	void startArray();
 	void endArray();
+	void writeNextElement();
 private:
+	State mState;
 	std::ostream &mStream;
 };
 

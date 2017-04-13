@@ -431,62 +431,106 @@ bool Reader::hasNextElement()
 Writer::Writer(std::ostream &stream)
 	:mStream(stream)
 {
+	mState = S_START;
+}
+
+void Writer::write(void *value)
+{
+	if(mState == S_VALUE) throw "bad state";
+	if(value) throw "Expected NULL";
+	mStream << "null";
 }
 
 void Writer::write(bool value)
 {
-	//mStream.put(value ? "true" : "false");
+	if(mState == S_VALUE) throw "bad state";
+	mStream << (value ? "true" : "false");
+	mState = S_VALUE;
 }
 
 void Writer::write(int value)
 {
-	mStream.put(value);
+	if(mState == S_VALUE) throw "bad state";
+	mStream << value;
+	mState = S_VALUE;
 }
 
 void Writer::write(unsigned int value)
 {
-	mStream.put(value);
+	if(mState == S_VALUE) throw "bad state";
+	mStream << value;
+	mState = S_VALUE;
 }
 
 void Writer::write(float value)
 {
-	mStream.put(value);
+	if(mState == S_VALUE) throw "bad state";
+	mStream << value;
+	mState = S_VALUE;
 }
 
 void Writer::write(double value)
 {
-	mStream.put(value);
+	if(mState == S_VALUE) throw "bad state";
+	mStream << value;
+	mState = S_VALUE;
 }
 
 void Writer::write(std::string value)
 {
-	mStream.write(value.c_str(), value.size());
+	if(mState == S_VALUE) throw "bad state";
+	mStream.put('"');
+	mStream << value;
+	mStream.put('"');
+	mState = S_VALUE;
 }
 
 void Writer::startObject()
 {
+	if(mState == S_VALUE) throw "bad state";
 	mStream.put('{');
+	mState = S_START;
 }
 
 void Writer::endObject()
 {
+	if(mState == S_SEPARATOR) throw "bad state";
 	mStream.put('}');
+	mState = S_VALUE;
 }
 
 void Writer::writeObjectKey(std::string key)
 {
-	mStream.write(key.c_str(), key.size());
+	if(mState == S_VALUE) {
+		mStream.put(',');
+	} else if(mState == S_SEPARATOR) {
+		throw "bad state";
+	}
+	mState = S_SEPARATOR;
+	write(key);
 	mStream.put(':');
+	mState = S_SEPARATOR;
 }
 
 void Writer::startArray()
 {
+	if(mState == S_VALUE) throw "bad state";
 	mStream.put('[');
+	mState = S_START;
 }
 
 void Writer::endArray()
 {
+	if(mState == S_SEPARATOR) throw "bad state";
 	mStream.put(']');
+	mState = S_VALUE;
+}
+
+void Writer::writeNextElement()
+{
+	if(mState != S_VALUE) throw "bad state";
+	mStream.put(',');
+	mState = S_SEPARATOR;
 }
 
 };

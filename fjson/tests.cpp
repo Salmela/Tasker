@@ -25,18 +25,18 @@
 
 using namespace FJson;
 
-std::istringstream stream;
+std::istringstream istream;
 static Reader *json = NULL;
 
 static void createReader(const char *str)
 {
-	stream.str(str);
-	stream.clear();
+	istream.str(str);
+	istream.clear();
 	if(json) delete json;
-	json = new Reader(stream);
+	json = new Reader(istream);
 }
 
-static bool initialization()
+static bool readInitialization()
 {
 	createReader("");
 	return true;
@@ -245,13 +245,134 @@ static bool readMixed()
 	return res;
 }
 
+std::ostringstream ostream;
+static Writer *out = NULL;
+
+static void createWriter()
+{
+	ostream.str("");
+	ostream.clear();
+	if(out) delete out;
+	out = new Writer(ostream);
+}
+
+static bool writeInitialization()
+{
+	createWriter();
+	return true;
+}
+
+static bool writeInt()
+{
+	bool res = true;
+	createWriter();
+	out->write(5);
+	res &= ostream.str() == "5";
+
+	createWriter();
+	out->write(0);
+	res &= ostream.str() == "0";
+
+	createWriter();
+	out->write(-5);
+	res &= ostream.str() == "-5";
+
+	return res;
+}
+
+static bool writeFloat()
+{
+	bool res = true;
+	createWriter();
+	out->write(0.0);
+	res &= ostream.str() == "0";
+
+	createWriter();
+	out->write(0.2);
+	res &= ostream.str() == "0.2";
+
+	return res;
+}
+
+static bool writeMisc()
+{
+	bool res = true;
+	createWriter();
+	out->write(nullptr);
+	res &= ostream.str() == "null";
+
+	createWriter();
+	out->write(false);
+	res &= ostream.str() == "false";
+
+	createWriter();
+	out->write(true);
+	res &= ostream.str() == "true";
+
+	createWriter();
+	std::string str = "hello";
+	out->write(str);
+	res &= ostream.str() == "\"hello\"";
+
+	return res;
+}
+
+static bool writeArray()
+{
+	bool res = true;
+
+	createWriter();
+	out->startArray();
+	out->endArray();
+	res &= ostream.str() == "[]";
+
+	createWriter();
+	out->startArray();
+	out->write(4);
+	out->endArray();
+	res &= ostream.str() == "[4]";
+
+	createWriter();
+	out->startArray();
+	out->write(4);
+	out->writeNextElement();
+	out->write(1);
+	out->endArray();
+	res &= ostream.str() == "[4,1]";
+
+	return res;
+}
+
+static bool writeObject()
+{
+	bool res = true;
+
+	createWriter();
+	out->startObject();
+	out->writeObjectKey("test");
+	out->write(4);
+	out->endObject();
+	res &= ostream.str() == "{\"test\":4}";
+
+	createWriter();
+	out->startObject();
+	out->writeObjectKey("test");
+	out->write(4);
+	out->writeObjectKey("cool");
+	out->write(7);
+	out->endObject();
+	res &= ostream.str() == "{\"test\":4,\"cool\":7}";
+
+	return res;
+}
+
 int main(int argc, char **argv)
 {
 	bool success;
 
 	std::cout << "Read tests\n";
 
-	success = initialization();
+	success = readInitialization();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = readInt();
 	std::cout << (success ? "Success" : "Failure") << "\n";
@@ -266,6 +387,20 @@ int main(int argc, char **argv)
 	success = readObject();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = readMixed();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+
+	std::cout << "Write tests\n";
+	success = writeInitialization();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = writeInt();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = writeFloat();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = writeMisc();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = writeArray();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = writeObject();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	delete json;
