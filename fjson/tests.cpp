@@ -348,20 +348,23 @@ static bool writeArray()
 
 	createWriter();
 	out->startArray();
+	out->startNextElement();
 	out->write(4);
 	out->endArray();
 	res &= ostream.str() == "[4]";
 
 	createWriter();
 	out->startArray();
+	out->startNextElement();
 	out->write(4);
-	out->writeNextElement();
+	out->startNextElement();
 	out->write(1);
 	out->endArray();
 	res &= ostream.str() == "[4,1]";
 
 	createWriter();
 	out->startArray();
+	out->startNextElement();
 	out->startArray();
 	out->endArray();
 	out->endArray();

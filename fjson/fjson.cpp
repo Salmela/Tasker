@@ -527,10 +527,12 @@ void Writer::endArray()
 	mState = S_VALUE;
 }
 
-void Writer::writeNextElement()
+void Writer::startNextElement()
 {
-	if(mState != S_VALUE) throw "bad state";
-	mStream.put(',');
+	if(mState == S_SEPARATOR) throw "bad state";
+	if(mState != S_START) {
+		mStream.put(',');
+	}
 	mState = S_SEPARATOR;
 }
 

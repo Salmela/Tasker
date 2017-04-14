@@ -23,4 +23,4 @@ tasker: cli.o $(OBJECTS)
 	$(CXX) $(LDFLAGS) cli.o $(OBJECTS) -o $@
 
 clean:
-	rm -f test tasker *.o *.d
+	rm -f test tasker *.o *.d fjson/*.o fjson/*.d

@@ -86,7 +86,7 @@ public:
 
 	void startArray();
 	void endArray();
-	void writeNextElement();
+	void startNextElement();
 private:
 	State mState;
 	std::ostream &mStream;

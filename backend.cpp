@@ -423,6 +423,7 @@ void Project::write()
 	writer->writeObjectKey("tasks");
 	writer->startArray();
 	for(const auto task : mList.all()) {
+		writer->startNextElement();
 		task->write(writer);
 	}
 	writer->endArray();
