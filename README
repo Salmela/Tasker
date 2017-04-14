@@ -31,4 +31,8 @@ file.
 Why git?
 ========
 
+It's important to have backups of your issues, It's nice to be able to see
+the issues even if you are offline. Both can be accomplished with proper
+version control. I decided to use git just because it's decentralized and
+It's only version control that I have used for now.
 

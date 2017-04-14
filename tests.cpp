@@ -91,8 +91,6 @@ bool createTaskTypeForProject() {
 
 	bool res = project.getType("test") == type;
 
-	delete type;
-
 	return res;
 }
 

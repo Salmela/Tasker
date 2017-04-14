@@ -139,6 +139,8 @@ void TaskListView::render(CliInterface *parent)
 			return;
 		}
 		parent->newView(new ModifyTaskTypeView(args[0]));
+	} else if (command == "w" || command == "write") {
+		parent->getProject()->write();
 	} else if (command == "q" || command == "quit") {
 		parent->deleteView(this);
 	}

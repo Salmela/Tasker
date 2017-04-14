@@ -105,6 +105,7 @@ static bool readString()
 	json->read(val); \
 	res &= (val == y);
 
+	cmp("", "");
 	cmp("a", "a");
 	cmp("ä", "ä");
 	cmp("\\n", "\n");
@@ -174,6 +175,13 @@ static bool readArray()
 	res &= (value == 2);
 	res &= (json->hasNextElement() == false);
 
+	createReader("[[]]");
+	json->startArray();
+	res &= (json->hasNextElement() == true);
+	json->startArray();
+	res &= (json->hasNextElement() == false);
+	res &= (json->hasNextElement() == false);
+
 	return res;
 }
 
@@ -205,6 +213,18 @@ static bool readObject()
 	res &= (key == "test");
 	json->read(val);
 	res &= (val == 4);
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "unit");
+	json->read(val);
+	res &= (val == 2);
+	res &= (json->readObjectKey(key) == false);
+
+	createReader("{\"test\":{}, \"unit\":2}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->startObject();
+	res &= (json->readObjectKey(key) == false);
 	res &= (json->readObjectKey(key) == true);
 	res &= (key == "unit");
 	json->read(val);
@@ -339,6 +359,13 @@ static bool writeArray()
 	out->write(1);
 	out->endArray();
 	res &= ostream.str() == "[4,1]";
+
+	createWriter();
+	out->startArray();
+	out->startArray();
+	out->endArray();
+	out->endArray();
+	res &= ostream.str() == "[[]]";
 
 	return res;
 }

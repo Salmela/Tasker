@@ -5,6 +5,8 @@
 #include <map>
 #include <set>
 
+#include "fjson/fjson.h"
+
 namespace Tasker {
 namespace Backend {
 
@@ -46,11 +48,14 @@ public:
 	bool isClosed(TaskState *state) const;
 	bool isIncomplete() const;
 
+	static TaskType *read(Project *project, FJson::Reader *reader);
+	void write(FJson::Writer *writer) const;
+
 private:
 	Project *mProject;
 	std::string mName;
-	TaskState *mStartState;
 	bool mIsDeleted;
+	TaskState *mStartState;
 	std::set<TaskState*> mEndStates;
 	std::map<TaskState*, std::set<TaskState*> > mStateMap;
 };
@@ -71,6 +76,9 @@ public:
 	TaskState *getState() const;
 
 	bool isClosed();
+	static Task *read(Project *project, FJson::Reader *reader);
+	void write(FJson::Writer *writer) const;
+
 private:
 	Project *mProject;
 	std::string mName;
@@ -100,11 +108,17 @@ public:
 	static Project *open(const char *dirname);
 
 	Project(); //< open for tests
+	~Project();
 	TaskType *getType(std::string name);
 	TaskList *getTaskList();
+
+	void write();//< TODO make private
 private:
+	std::string mDirname;
 	std::map<std::string, TaskType*> mTypes;
 	TaskList mList;
+
+	void read();
 
 	friend TaskType;
 };

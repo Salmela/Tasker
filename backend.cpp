@@ -19,6 +19,7 @@
  */
 #include <algorithm>
 #include <exception>
+#include <fstream>
 
 #include "backend.h"
 
@@ -182,6 +183,60 @@ bool TaskType::isIncomplete() const
 	return false;
 }
 
+TaskType *TaskType::read(Project *project, FJson::Reader *reader)
+{
+	TaskType *type = new TaskType(project, "");
+	reader->startObject();
+	std::string key;
+
+	while(reader->readObjectKey(key)) {
+		if(key == "name") {
+			reader->read(type->mName);
+		} else if(key == "deleted") {
+			reader->read(type->mIsDeleted);
+		} else if(key == "start-state") {
+			int state;
+			reader->read(state);
+		} else if(key == "end-states") {
+			reader->startArray();
+			while(reader->hasNextElement()) {
+				int state;
+				reader->read(state);
+			}
+		} else if(key == "state-map") {
+			reader->startObject();
+			std::string name;
+			reader->readObjectKey(name);
+		} else {
+			throw "Unknown task";
+		}
+	}
+	return type;
+}
+
+void TaskType::write(FJson::Writer *writer) const
+{
+	writer->startObject();
+	writer->writeObjectKey("name");
+	writer->write(mName);
+	writer->writeObjectKey("deleted");
+	writer->write(mIsDeleted);
+	writer->writeObjectKey("start-state");
+	writer->write(0);//TODO
+	writer->writeObjectKey("end-states");
+
+	writer->startArray();
+	writer->write(0);//TODO
+	writer->endArray();
+
+	writer->writeObjectKey("state-map");
+
+	writer->startObject();//TODO
+	writer->endObject();
+
+	writer->endObject();
+}
+
 /// Task
 
 Task::Task(Project *project, std::string name)
@@ -233,6 +288,59 @@ TaskState *Task::getState() const
 	return mState;
 }
 
+Task *Task::read(Project *project, FJson::Reader *reader)
+{
+	auto *task = new Task(project, "");
+
+	reader->startObject();
+	std::string key;
+
+	while(reader->readObjectKey(key)) {
+		if(key == "name") {
+			reader->read(task->mName);
+		} else if(key == "desc") {
+			reader->startArray();
+			while(reader->hasNextElement()) {
+				std::string str;
+				reader->read(str);
+			}
+		} else if(key == "type") {
+			std::string type;
+			reader->read(type);
+			task->mType = project->getType(type);
+		} else if(key == "state") {
+			int state;
+			reader->read(state);
+			task->mState = NULL;
+		} else if(key == "closed") {
+			reader->read(task->mClosed);
+		} else {
+			std::cout << "Unknown\n";
+		}
+	}
+	return task;
+}
+
+void Task::write(FJson::Writer *writer) const
+{
+	writer->startObject();
+	writer->writeObjectKey("name");
+	writer->write(mName);
+	writer->writeObjectKey("desc");
+
+	writer->startArray();
+	writer->write(mDesc);//< TODO split evenly
+	writer->endArray();
+
+	writer->writeObjectKey("type");
+	writer->write(mType->getName());
+	writer->writeObjectKey("state");
+	writer->write(0);//< TODO
+	writer->writeObjectKey("closed");
+	writer->write(mClosed);
+	writer->endObject();
+}
+
 /// TaskList
 
 void TaskList::addTask(Task *task)
@@ -260,16 +368,28 @@ unsigned int TaskList::getSize() const
 
 Project *Project::create(const char *dirname)
 {
-	return new Project();
+	auto project = new Project();
+	project->mDirname = dirname;
+	return project;
 }
 
 Project *Project::open(const char *dirname)
 {
-	return new Project();
+	auto project = new Project();
+	project->mDirname = dirname;
+	project->read();
+	return project;
 }
 
 Project::Project()
 {
+}
+
+Project::~Project()
+{
+	for(const auto &entry : mTypes) {
+		delete entry.second;
+	}
 }
 
 TaskType *Project::getType(std::string name)
@@ -281,6 +401,63 @@ TaskType *Project::getType(std::string name)
 TaskList *Project::getTaskList()
 {
 	return &mList;
+}
+
+void Project::write()
+{
+	if(mDirname.empty()) return;
+
+	std::ofstream stream(mDirname + "/tasker.conf");
+
+	auto writer = new FJson::Writer(stream);
+	writer->startObject();
+
+	writer->writeObjectKey("types");
+	writer->startObject();
+	for(const auto type : mTypes) {
+		writer->writeObjectKey(type.first);
+		type.second->write(writer);
+	}
+	writer->endObject();
+
+	writer->writeObjectKey("tasks");
+	writer->startArray();
+	for(const auto task : mList.all()) {
+		task->write(writer);
+	}
+	writer->endArray();
+
+	writer->endObject();
+}
+
+void Project::read()
+{
+	if(mDirname.empty()) return;
+
+	std::ifstream stream(mDirname + "/tasker.conf");
+
+	auto reader = new FJson::Reader(stream);
+	reader->startObject();
+	std::string key;
+
+	while(reader->readObjectKey(key)) {
+		if(key == "types") {
+			reader->startObject();
+			std::string name;
+			while(reader->readObjectKey(name)) {
+				auto type = TaskType::read(this, reader);
+				mTypes[name] = type;
+			}
+		} else if(key == "tasks") {
+			reader->startArray();
+			while(reader->hasNextElement()) {
+				auto *task = Task::read(this, reader);
+				mList.addTask(task);
+			}
+		} else {
+			std::cout << "Unknown\n";
+		}
+	}
 }
 
 };

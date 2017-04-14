@@ -52,7 +52,7 @@ void parseRootObject(FJson::Reader *reader)
 		if(key == "cars") {
 			std::cout << "Cars";
 			reader->startArray();
-			while (reader->hasNextElement()) {
+			while(reader->hasNextElement()) {
 				parseCar(reader);
 			}
 		} else {

@@ -164,7 +164,7 @@ void Reader::parseString()
 
 	std::ostringstream builder;
 	c = mStream.get();
-	do {
+	while(c != '\"' && c != -1) {
 		//TODO we should validate utf8 multi-byte characters
 		if(c == '\\') {
 			c = mStream.get();
@@ -207,7 +207,7 @@ void Reader::parseString()
 			builder << (char)c;
 		}
 		c = mStream.get();
-	} while(c != '\"' && c != -1);
+	}
 
 	mToken.string = builder.str();
 
@@ -368,6 +368,7 @@ bool Reader::readObjectKey(std::string &key)
 	}
 	bool res;
 	if(mToken.type == END_OBJECT) {
+		afterStartBracket = false;
 		res = false;
 		mStackSize--;
 	} else if(afterStartBracket || mToken.type == SEPARATOR) {
