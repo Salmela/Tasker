@@ -464,9 +464,16 @@ Project *Project::create(const char *dirname)
 Project *Project::open(const char *dirname)
 {
 	auto project = new Project();
-	project->mDirname = dirname;
-	project->read();
-	return project;
+	project->mDirname = Config::getTaskerData(dirname);
+	if(project->mDirname.empty()) {
+		project->mDirname = dirname;
+	}
+	if(project->read()) {
+		return project;
+	} else {
+		delete project;
+		return NULL;
+	}
 }
 
 Project::Project()
@@ -519,12 +526,14 @@ void Project::write()
 	writer->endObject();
 }
 
-void Project::read()
+bool Project::read()
 {
-	if(mDirname.empty()) return;
+	if(mDirname.empty()) return false;
+
+	//create lock file
 
 	std::ifstream stream(mDirname + "/tasker.conf");
-	if(!stream.is_open()) return;
+	if(!stream.is_open()) return false;
 
 	auto reader = new FJson::Reader(stream);
 	reader->startObject();
@@ -548,6 +557,97 @@ void Project::read()
 			std::cout << "Unknown\n";
 		}
 	}
+	return true;
+}
+
+/// Config
+
+Config Config::mConfig;
+
+Config::Config() {
+	this->readHomeConfig();
+}
+
+static bool startsWith(std::string &prefix, std::string &value) {
+	if(value.size() < prefix.size()) return false;
+	return std::equal(prefix.begin(), prefix.end(), value.begin());
+}
+
+std::string Config::getTaskerData(std::string path)
+{
+	//TODO what if there is nested project, we should choose the deepest match
+	for(auto *repository : Config::mConfig.mRepositories) {
+		if(startsWith(repository->source, path)) {
+			return repository->data;
+		}
+	}
+	return "";
+}
+
+void Config::setTaskerData(std::string path, std::string source)
+{
+	mConfig.addRepository(source, path);
+
+	//TODO lock the taskerconf file somehow
+	std::ofstream stream(std::string(getenv("HOME")) + "/.taskerconf");
+	FJson::Writer writer(stream);
+
+	writer.startObject();
+	writer.writeObjectKey("repositories");
+	writer.startArray();
+	for(const auto *repo : Config::mConfig.mRepositories) {
+		writer.startObject();
+		writer.writeObjectKey("source");
+		writer.write(repo->source);
+		writer.writeObjectKey("data");
+		writer.write(repo->data);
+		writer.endObject();
+	}
+	writer.endArray();
+	writer.endObject();
+}
+
+void Config::readHomeConfig() {
+	std::ifstream stream(std::string(getenv("HOME")) + "/.taskerconf");
+	if(!stream.is_open()) return;
+	FJson::Reader reader(stream);
+	std::string key;
+
+	reader.startObject();
+	while(reader.readObjectKey(key)) {
+		if(key == "repositories") {
+			readRepository(reader);
+		} else {
+			std::cout << "unknown\n";
+		}
+	}
+}
+
+void Config::readRepository(FJson::Reader &reader) {
+	reader.startArray();
+
+	while(reader.hasNextElement()) {
+		std::string key, source, data;
+		reader.startObject();
+		while(reader.readObjectKey(key)) {
+			if(key == "source") {
+				reader.read(source);
+			} else if(key == "data") {
+				reader.read(data);
+			} else {
+				std::cout << "unknown\n";
+			}
+		}
+		addRepository(source, data);
+	}
+}
+
+void Config::addRepository(std::string source, std::string data)
+{
+	auto *repo = new Repository;
+	repo->data = data;
+	repo->source = source;
+	mRepositories.push_back(repo);
 }
 
 };

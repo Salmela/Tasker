@@ -123,9 +123,31 @@ private:
 	std::map<std::string, TaskType*> mTypes;
 	TaskList mList;
 
-	void read();
+	bool read();
 
 	friend TaskType;
+};
+
+class Config//< TODO this object should be thread safe
+{
+public:
+	static std::string getTaskerData(std::string path);
+	static void setTaskerData(std::string path, std::string source);
+private:
+	Config();
+	static Config mConfig;
+
+	struct Repository {
+		std::string data;
+		std::string source;
+	};
+
+	void readHomeConfig();
+	void readRepository(FJson::Reader &reader);
+
+	void addRepository(std::string source, std::string data);
+
+	std::vector<Repository*> mRepositories;
 };
 
 };

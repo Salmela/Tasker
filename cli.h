@@ -52,7 +52,8 @@ public:
 class Main : public CliInterface
 {
 public:
-	Main(int argc, char **argv);
+	Main();
+	bool init(int argc, char **argv);
 
 	bool mainLoop();
 	void newView(View *view) override;
@@ -60,7 +61,7 @@ public:
 	Backend::Project *getProject() override;
 	View *getActiveView();
 private:
-	Backend::Project *project;
+	Backend::Project *mProject;
 	TaskListView mListView;
 	std::vector<View*> mViewStack;
 };

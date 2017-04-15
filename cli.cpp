@@ -21,13 +21,18 @@
 #include <sstream>
 #include <string>
 #include <exception>
+#include <unistd.h>
 
 #include "backend.h"
 #include "cli.h"
 
 int main(int argc, char **argv)
 {
-	Tasker::Cli::Main cli(argc, argv);
+	Tasker::Cli::Main cli;
+
+	if(!cli.init(argc, argv)) {
+		return 1;
+	}
 
 	return (int)!cli.mainLoop();
 }
@@ -51,11 +56,37 @@ private:
 	const char *mMessage;
 };
 
-Main::Main(int argc, char **argv)
+Main::Main()
 	:mListView()
 {
-	project = Backend::Project::open("./");
 	newView(&mListView);
+}
+
+bool Main::init(int argc, char **argv)
+{
+	const char *cwd = get_current_dir_name();
+	mProject = Backend::Project::open(cwd);
+	if(mProject) {
+		return true;
+	}
+	std::cerr << "Tasker data not found.\n";
+	while(true) {
+		std::cout << "Create a new tasker repository? [y/n] ";
+		std::string line;
+		std::getline(std::cin, line);
+		if(line == "y") {
+			break;
+		} else if(line == "n") {
+			return false;
+		}
+	}
+	mProject = Backend::Project::create("./");
+	std::cout << "Where is the project folder? ";
+	std::string src;
+	std::getline(std::cin, src);
+
+	Backend::Config::setTaskerData(cwd, src);
+	return true;
 }
 
 void Main::newView(View *view)
@@ -88,7 +119,7 @@ View *Main::getActiveView()
 
 Backend::Project *Main::getProject()
 {
-	return project;
+	return mProject;
 }
 
 /// TaskListView
