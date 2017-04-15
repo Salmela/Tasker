@@ -81,7 +81,7 @@ public:
 	TaskType *getType() const;
 	TaskState *getState() const;
 
-	bool isClosed();
+	bool isClosed() const;
 	static Task *read(Project *project, FJson::Reader &in);
 	void write(FJson::Writer &out) const;
 
@@ -96,12 +96,43 @@ private:
 	std::vector<Task*> mSubTask;
 };
 
+struct TaskFilter
+{
+public:
+	static TaskFilter notOf(TaskFilter *a);
+	static TaskFilter orOf(TaskFilter *a, TaskFilter *b);
+	static TaskFilter andOf(TaskFilter *a, TaskFilter *b);
+	static TaskFilter isOpen(bool open);
+	static TaskFilter hasState(TaskState *state);
+	static TaskFilter search(std::string query);
+
+	bool getValue(const Task *task);
+	bool operator()(const Task *task);
+private:
+	enum FilterType {
+		NOT_OF,
+		OR_OF,
+		AND_OF,
+		IS_OPEN,
+		HAS_STATE,
+		SEARCH
+	};
+	TaskFilter(FilterType type);
+	FilterType mType;
+
+	bool mIsOpen;
+	std::string mQuery;
+	TaskFilter *mFirst, *mSecond;
+	TaskState *mState;
+};
+
 class TaskList
 {
 public:
 	void addTask(Task *task);
 	void removeTask(Task *task);
-	const std::vector<Task*> all();
+	const std::vector<Task*> all() const;
+	const std::vector<Task*> getFiltered(TaskFilter filter) const;
 	unsigned int getSize() const;
 private:
 	std::vector<Task*> mTasks;

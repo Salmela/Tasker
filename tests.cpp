@@ -108,6 +108,50 @@ bool addAndRemoveTask() {
 	return list.getSize() == 0;
 }
 
+bool filterTask() {
+	Backend::TaskList list;
+
+	Backend::TaskType type(NULL, "type");
+
+	auto *state = Backend::TaskState::create("start");
+	auto *endState = Backend::TaskState::create("end");
+
+	type.setStartState(state);
+	type.setEndStates({endState});
+	type.setTransition(state, endState);
+
+	auto *task = new Backend::Task(NULL, "test");
+	task->setType(&type);
+	list.addTask(task);
+
+	task = new Backend::Task(NULL, "closed");
+	task->setType(&type);
+	task->setState(endState);
+	list.addTask(task);
+
+	bool res = list.getSize() == 2;
+
+	auto tasks = list.getFiltered(Backend::TaskFilter::hasState(endState));
+	res &= tasks.size() == 1;
+
+	tasks = list.getFiltered(Backend::TaskFilter::isOpen(false));
+	res &= tasks.size() == 1;
+
+	auto f1 = Backend::TaskFilter::isOpen(true);
+	auto f2 = Backend::TaskFilter::hasState(endState);
+	tasks = list.getFiltered(Backend::TaskFilter::orOf(&f1, &f2));
+	res &= tasks.size() == 2;
+
+	tasks = list.getFiltered(Backend::TaskFilter::andOf(&f1, &f2));
+	res &= tasks.size() == 0;
+
+	auto f3 = Backend::TaskFilter::notOf(&f1);
+	tasks = list.getFiltered(Backend::TaskFilter::andOf(&f3, &f2));
+	res &= tasks.size() == 1;
+
+	return res;
+}
+
 int testMain()
 {
 	bool success;
@@ -128,6 +172,8 @@ int testMain()
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	success = addAndRemoveTask();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = filterTask();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	return 0;
 }

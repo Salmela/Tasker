@@ -407,6 +407,11 @@ TaskState *Task::getState() const
 	return mState;
 }
 
+bool Task::isClosed() const
+{
+	return mType->isClosed(mState);
+}
+
 Task *Task::read(Project *project, FJson::Reader &in)
 {
 	auto *task = new Task(project, "");
@@ -467,6 +472,84 @@ void Task::write(FJson::Writer &out) const
 	out.endObject();
 }
 
+/// TaskFilter
+
+TaskFilter TaskFilter::notOf(TaskFilter *a)
+{
+	TaskFilter f(NOT_OF);
+	f.mFirst = a;
+	return f;
+}
+
+TaskFilter TaskFilter::orOf(TaskFilter *a, TaskFilter *b)
+{
+	TaskFilter f(OR_OF);
+	f.mFirst = a;
+	f.mSecond = b;
+	return f;
+}
+
+TaskFilter TaskFilter::andOf(TaskFilter *a, TaskFilter *b)
+{
+	TaskFilter f(AND_OF);
+	f.mFirst = a;
+	f.mSecond = b;
+	return f;
+}
+
+TaskFilter TaskFilter::isOpen(bool open)
+{
+	TaskFilter f(IS_OPEN);
+	f.mIsOpen = open;
+	return f;
+}
+
+TaskFilter TaskFilter::hasState(TaskState *state)
+{
+	TaskFilter f(HAS_STATE);
+	f.mState = state;
+	return f;
+}
+
+TaskFilter TaskFilter::search(std::string query)
+{
+	TaskFilter f(SEARCH);
+	f.mQuery = query;
+	return f;
+}
+
+TaskFilter::TaskFilter(FilterType type)
+{
+	mType = type;
+}
+
+bool TaskFilter::getValue(const Task *task)
+{
+	switch(mType) {
+		case NOT_OF: {
+			return !mFirst->getValue(task);
+		}
+		case OR_OF:
+			return mFirst->getValue(task) ||
+				mSecond->getValue(task);
+		case AND_OF:
+			return mFirst->getValue(task) &&
+				mSecond->getValue(task);
+		case IS_OPEN:
+			return !task->isClosed();
+		case HAS_STATE:
+			return task->getState() == mState;
+		case SEARCH:
+			return false;//TODO implement
+	}
+	return true;
+}
+
+bool TaskFilter::operator()(const Task *task)
+{
+	return getValue(task);
+}
+
 /// TaskList
 
 void TaskList::addTask(Task *task)
@@ -480,9 +563,17 @@ void TaskList::removeTask(Task *task)
 		mTasks.end());
 }
 
-const std::vector<Task*> TaskList::all()
+const std::vector<Task*> TaskList::all() const
 {
 	return mTasks;
+}
+
+const std::vector<Task*> TaskList::getFiltered(TaskFilter filter) const
+{
+	std::vector<Task*> newList(std::min((int)mTasks.size(), 256));
+	auto it = std::copy_if(mTasks.begin(), mTasks.end(), newList.begin(), filter);
+	newList.resize(std::distance(newList.begin(), it));
+	return newList;
 }
 
 unsigned int TaskList::getSize() const
