@@ -96,17 +96,17 @@ void TaskState::free()
 	mIsDeleted = true;
 }
 
-TaskState *TaskState::read(FJson::Reader *reader)
+TaskState *TaskState::read(FJson::Reader &in)
 {
 	std::string name;
-	reader->read(name);
+	in.read(name);
 	auto state = new TaskState(name);
 	return state;
 }
 
-void TaskState::write(FJson::Writer *writer) const
+void TaskState::write(FJson::Writer &out) const
 {
-	writer->write(mName);
+	out.write(mName);
 }
 
 /// TaskType
@@ -227,43 +227,43 @@ bool TaskType::isIncomplete() const
 	return false;
 }
 
-TaskType *TaskType::read(Project *project, FJson::Reader *reader)
+TaskType *TaskType::read(Project *project, FJson::Reader &in)
 {
 	TaskType *type = new TaskType(project, "");
-	reader->startObject();
+	in.startObject();
 	std::string key;
 
 	int startState;
 	std::vector<int> endStates;
 	std::map<int, std::set<int> > stateMap;
-	while(reader->readObjectKey(key)) {
+	while(in.readObjectKey(key)) {
 		if(key == "name") {
-			reader->read(type->mName);
+			in.read(type->mName);
 		} else if(key == "deleted") {
-			reader->read(type->mIsDeleted);
+			in.read(type->mIsDeleted);
 		} else if(key == "start-state") {
-			reader->read(startState);
+			in.read(startState);
 		} else if(key == "end-states") {
-			reader->startArray();
-			while(reader->hasNextElement()) {
+			in.startArray();
+			while(in.hasNextElement()) {
 				int state;
-				reader->read(state);
+				in.read(state);
 				endStates.push_back(state);
 			}
 		} else if(key == "state-map") {
-			reader->startArray();
-			for(unsigned int i = 0; reader->hasNextElement(); i++) {
-				reader->startArray();
-				while(reader->hasNextElement()) {
+			in.startArray();
+			for(unsigned int i = 0; in.hasNextElement(); i++) {
+				in.startArray();
+				while(in.hasNextElement()) {
 					int state;
-					reader->read(state);
+					in.read(state);
 					stateMap[i].insert(state);
 				}
 			}
 		} else if(key == "states") {
-			reader->startArray();
-			while(reader->hasNextElement()) {
-				auto state = TaskState::read(reader);
+			in.startArray();
+			while(in.hasNextElement()) {
+				auto state = TaskState::read(in);
 				type->mStates.push_back(state);
 			}
 		} else {
@@ -284,53 +284,53 @@ TaskType *TaskType::read(Project *project, FJson::Reader *reader)
 	return type;
 }
 
-void TaskType::write(FJson::Writer *writer) const
+void TaskType::write(FJson::Writer &out) const
 {
-	writer->startObject();
-	writer->writeObjectKey("name");
-	writer->write(mName);
-	writer->writeObjectKey("deleted");
-	writer->write(mIsDeleted);
-	writer->writeObjectKey("start-state");
-	writer->write(getStateId(mStartState));
+	out.startObject();
+	out.writeObjectKey("name");
+	out.write(mName);
+	out.writeObjectKey("deleted");
+	out.write(mIsDeleted);
+	out.writeObjectKey("start-state");
+	out.write(getStateId(mStartState));
 
-	writer->writeObjectKey("end-states");
-	writer->startArray();
+	out.writeObjectKey("end-states");
+	out.startArray();
 	for(const auto state : mEndStates) {
-		writer->startNextElement();
-		writer->write(getStateId(state));
+		out.startNextElement();
+		out.write(getStateId(state));
 	}
-	writer->endArray();
+	out.endArray();
 
-	writer->writeObjectKey("state-map");
+	out.writeObjectKey("state-map");
 
-	writer->startArray();
+	out.startArray();
 	for(unsigned int i = 0; i < mStates.size(); i++) {
-		writer->startNextElement();
-		writer->startArray();
+		out.startNextElement();
+		out.startArray();
 		TaskState *from = mStates[i];
 		auto iter = mStateMap.find(from);
 
 		if(iter != mStateMap.end()) {
 			for(const auto state : iter->second) {
-				writer->startNextElement();
-				writer->write(getStateId(state));
+				out.startNextElement();
+				out.write(getStateId(state));
 			}
 		}
-		writer->endArray();
+		out.endArray();
 	}
-	writer->endArray();
+	out.endArray();
 
-	writer->writeObjectKey("states");
+	out.writeObjectKey("states");
 
-	writer->startArray();
+	out.startArray();
 	for(const auto state : mStates) {
-		writer->startNextElement();
-		state->write(writer);
+		out.startNextElement();
+		state->write(out);
 	}
-	writer->endArray();
+	out.endArray();
 
-	writer->endObject();
+	out.endObject();
 }
 
 int TaskType::getStateId(TaskState *state) const
@@ -407,34 +407,34 @@ TaskState *Task::getState() const
 	return mState;
 }
 
-Task *Task::read(Project *project, FJson::Reader *reader)
+Task *Task::read(Project *project, FJson::Reader &in)
 {
 	auto *task = new Task(project, "");
 	int state;
 
-	reader->startObject();
+	in.startObject();
 	std::string key;
 
-	while(reader->readObjectKey(key)) {
+	while(in.readObjectKey(key)) {
 		if(key == "name") {
-			reader->read(task->mName);
+			in.read(task->mName);
 		} else if(key == "desc") {
-			reader->startArray();
+			in.startArray();
 			std::ostringstream desc;
-			while(reader->hasNextElement()) {
+			while(in.hasNextElement()) {
 				std::string str;
-				reader->read(str);
+				in.read(str);
 				desc << str;
 			}
 			task->mDesc = desc.str();
 		} else if(key == "type") {
 			std::string type;
-			reader->read(type);
+			in.read(type);
 			task->mType = project->getType(type);
 		} else if(key == "state") {
-			reader->read(state);
+			in.read(state);
 		} else if(key == "closed") {
-			reader->read(task->mClosed);
+			in.read(task->mClosed);
 		} else {
 			std::cout << "Unknown\n";
 		}
@@ -443,28 +443,28 @@ Task *Task::read(Project *project, FJson::Reader *reader)
 	return task;
 }
 
-void Task::write(FJson::Writer *writer) const
+void Task::write(FJson::Writer &out) const
 {
-	writer->startObject();
-	writer->writeObjectKey("name");
-	writer->write(mName);
-	writer->writeObjectKey("desc");
+	out.startObject();
+	out.writeObjectKey("name");
+	out.write(mName);
+	out.writeObjectKey("desc");
 
-	writer->startArray();
+	out.startArray();
 	std::vector<std::string> lines = split(mDesc, '\n');
 	for(auto line : lines) {
-		writer->startNextElement();
-		writer->write(line);
+		out.startNextElement();
+		out.write(line + "\\n");
 	}
-	writer->endArray();
+	out.endArray();
 
-	writer->writeObjectKey("type");
-	writer->write(mType->getName());
-	writer->writeObjectKey("state");
-	writer->write(mType->getStateId(mState));
-	writer->writeObjectKey("closed");
-	writer->write(mClosed);
-	writer->endObject();
+	out.writeObjectKey("type");
+	out.write(mType->getName());
+	out.writeObjectKey("state");
+	out.write(mType->getStateId(mState));
+	out.writeObjectKey("closed");
+	out.write(mClosed);
+	out.endObject();
 }
 
 /// TaskList
@@ -542,26 +542,26 @@ void Project::write()
 
 	std::ofstream stream(mDirname + "/tasker.conf");
 
-	auto writer = new FJson::Writer(stream, true);
-	writer->startObject();
+	FJson::Writer out(stream, true);
+	out.startObject();
 
-	writer->writeObjectKey("types");
-	writer->startObject();
+	out.writeObjectKey("types");
+	out.startObject();
 	for(const auto type : mTypes) {
-		writer->writeObjectKey(type.first);
-		type.second->write(writer);
+		out.writeObjectKey(type.first);
+		type.second->write(out);
 	}
-	writer->endObject();
+	out.endObject();
 
-	writer->writeObjectKey("tasks");
-	writer->startArray();
+	out.writeObjectKey("tasks");
+	out.startArray();
 	for(const auto task : mList.all()) {
-		writer->startNextElement();
-		task->write(writer);
+		out.startNextElement();
+		task->write(out);
 	}
-	writer->endArray();
+	out.endArray();
 
-	writer->endObject();
+	out.endObject();
 }
 
 bool Project::read()
@@ -573,22 +573,22 @@ bool Project::read()
 	std::ifstream stream(mDirname + "/tasker.conf");
 	if(!stream.is_open()) return false;
 
-	auto reader = new FJson::Reader(stream);
-	reader->startObject();
+	FJson::Reader in(stream);
+	in.startObject();
 	std::string key;
 
-	while(reader->readObjectKey(key)) {
+	while(in.readObjectKey(key)) {
 		if(key == "types") {
-			reader->startObject();
+			in.startObject();
 			std::string name;
-			while(reader->readObjectKey(name)) {
-				auto type = TaskType::read(this, reader);
+			while(in.readObjectKey(name)) {
+				auto type = TaskType::read(this, in);
 				mTypes[name] = type;
 			}
 		} else if(key == "tasks") {
-			reader->startArray();
-			while(reader->hasNextElement()) {
-				auto *task = Task::read(this, reader);
+			in.startArray();
+			while(in.hasNextElement()) {
+				auto *task = Task::read(this, in);
 				mList.addTask(task);
 			}
 		} else {
@@ -628,50 +628,50 @@ void Config::setTaskerData(std::string path, std::string source)
 
 	//TODO lock the taskerconf file somehow
 	std::ofstream stream(std::string(getenv("HOME")) + "/.taskerconf");
-	FJson::Writer writer(stream, true);
+	FJson::Writer out(stream, true);
 
-	writer.startObject();
-	writer.writeObjectKey("repositories");
-	writer.startArray();
+	out.startObject();
+	out.writeObjectKey("repositories");
+	out.startArray();
 	for(const auto *repo : Config::mConfig.mRepositories) {
-		writer.startObject();
-		writer.writeObjectKey("source");
-		writer.write(repo->source);
-		writer.writeObjectKey("data");
-		writer.write(repo->data);
-		writer.endObject();
+		out.startObject();
+		out.writeObjectKey("source");
+		out.write(repo->source);
+		out.writeObjectKey("data");
+		out.write(repo->data);
+		out.endObject();
 	}
-	writer.endArray();
-	writer.endObject();
+	out.endArray();
+	out.endObject();
 }
 
 void Config::readHomeConfig() {
 	std::ifstream stream(std::string(getenv("HOME")) + "/.taskerconf");
 	if(!stream.is_open()) return;
-	FJson::Reader reader(stream);
+	FJson::Reader in(stream);
 	std::string key;
 
-	reader.startObject();
-	while(reader.readObjectKey(key)) {
+	in.startObject();
+	while(in.readObjectKey(key)) {
 		if(key == "repositories") {
-			readRepository(reader);
+			readRepository(in);
 		} else {
 			std::cout << "unknown\n";
 		}
 	}
 }
 
-void Config::readRepository(FJson::Reader &reader) {
-	reader.startArray();
+void Config::readRepository(FJson::Reader &in) {
+	in.startArray();
 
-	while(reader.hasNextElement()) {
+	while(in.hasNextElement()) {
 		std::string key, source, data;
-		reader.startObject();
-		while(reader.readObjectKey(key)) {
+		in.startObject();
+		while(in.readObjectKey(key)) {
 			if(key == "source") {
-				reader.read(source);
+				in.read(source);
 			} else if(key == "data") {
-				reader.read(data);
+				in.read(data);
 			} else {
 				std::cout << "unknown\n";
 			}

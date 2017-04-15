@@ -25,8 +25,8 @@ public:
 	void unref();
 	void free();
 
-	static TaskState *read(FJson::Reader *reader);
-	void write(FJson::Writer *writer) const;
+	static TaskState *read(FJson::Reader &in);
+	void write(FJson::Writer &out) const;
 private:
 	TaskState(std::string name);
 
@@ -51,8 +51,8 @@ public:
 	bool isClosed(TaskState *state) const;
 	bool isIncomplete() const;
 
-	static TaskType *read(Project *project, FJson::Reader *reader);
-	void write(FJson::Writer *writer) const;
+	static TaskType *read(Project *project, FJson::Reader &in);
+	void write(FJson::Writer &out) const;
 	int getStateId(TaskState *state) const;
 	TaskState *getStateById(unsigned int index) const;
 
@@ -82,8 +82,8 @@ public:
 	TaskState *getState() const;
 
 	bool isClosed();
-	static Task *read(Project *project, FJson::Reader *reader);
-	void write(FJson::Writer *writer) const;
+	static Task *read(Project *project, FJson::Reader &in);
+	void write(FJson::Writer &out) const;
 
 private:
 	Project *mProject;
@@ -144,7 +144,7 @@ private:
 	};
 
 	void readHomeConfig();
-	void readRepository(FJson::Reader &reader);
+	void readRepository(FJson::Reader &in);
 
 	void addRepository(std::string source, std::string data);
 
