@@ -21,6 +21,7 @@ enum TokenType {
 };
 
 enum State {
+	S_INIT,//< initial state
 	S_START,//< after Object or Array start token
 	S_VALUE,//< after Value is written
 	S_SEPARATOR//< after Object or Array separator
@@ -70,7 +71,8 @@ private:
 
 class Writer {
 public:
-	Writer(std::ostream &stream);
+	Writer(std::ostream &stream, bool doPretty = false);
+	~Writer();
 
 	void write(void *value);
 	void write(bool value);
@@ -88,6 +90,13 @@ public:
 	void endArray();
 	void startNextElement();
 private:
+	void doIndentation(bool lineFeed = false) const;
+	void valueStateTransition();
+
+	bool mDoPrettyPrint;
+	unsigned int mIndentLevel;
+	unsigned int mIndentWidth;
+	char mIndentChar;
 	State mState;
 	std::ostream &mStream;
 };

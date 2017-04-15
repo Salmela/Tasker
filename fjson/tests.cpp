@@ -417,6 +417,23 @@ static bool writeObject()
 	return res;
 }
 
+static bool badWriteMixed()
+{
+	bool res = true;
+
+	createWriter();
+	out->startArray();
+	bool success = false;
+	try {
+		out->write(4);
+	} catch(...) {
+		success = true;
+	}
+	res &= success;
+
+	return res;
+}
+
 int main(int argc, char **argv)
 {
 	bool success;
@@ -452,6 +469,8 @@ int main(int argc, char **argv)
 	success = writeArray();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = writeObject();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = badWriteMixed();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	delete json;

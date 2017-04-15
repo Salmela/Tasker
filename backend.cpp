@@ -20,11 +20,29 @@
 #include <algorithm>
 #include <exception>
 #include <fstream>
+#include <sstream>
 
 #include "backend.h"
 
 namespace Tasker {
 namespace Backend {
+
+// From https://stackoverflow.com/questions/236129/236803#236803
+template<typename Out>
+void split(const std::string &str, char delim, Out result) {
+	std::stringstream ss;
+	ss.str(str);
+	std::string item;
+	while(std::getline(ss, item, delim)) {
+		*(result++) = item;
+	}
+}
+
+std::vector<std::string> split(const std::string &str, char delim) {
+	std::vector<std::string> elements;
+	split(str, delim, std::back_inserter(elements));
+	return elements;
+}
 
 /// TaskState
 TaskState::TaskState(std::string name)
@@ -402,10 +420,13 @@ Task *Task::read(Project *project, FJson::Reader *reader)
 			reader->read(task->mName);
 		} else if(key == "desc") {
 			reader->startArray();
+			std::ostringstream desc;
 			while(reader->hasNextElement()) {
 				std::string str;
 				reader->read(str);
+				desc << str;
 			}
+			task->mDesc = desc.str();
 		} else if(key == "type") {
 			std::string type;
 			reader->read(type);
@@ -430,7 +451,11 @@ void Task::write(FJson::Writer *writer) const
 	writer->writeObjectKey("desc");
 
 	writer->startArray();
-	writer->write(mDesc);//< TODO split evenly
+	std::vector<std::string> lines = split(mDesc, '\n');
+	for(auto line : lines) {
+		writer->startNextElement();
+		writer->write(line);
+	}
 	writer->endArray();
 
 	writer->writeObjectKey("type");
@@ -517,7 +542,7 @@ void Project::write()
 
 	std::ofstream stream(mDirname + "/tasker.conf");
 
-	auto writer = new FJson::Writer(stream);
+	auto writer = new FJson::Writer(stream, true);
 	writer->startObject();
 
 	writer->writeObjectKey("types");
@@ -603,7 +628,7 @@ void Config::setTaskerData(std::string path, std::string source)
 
 	//TODO lock the taskerconf file somehow
 	std::ofstream stream(std::string(getenv("HOME")) + "/.taskerconf");
-	FJson::Writer writer(stream);
+	FJson::Writer writer(stream, true);
 
 	writer.startObject();
 	writer.writeObjectKey("repositories");

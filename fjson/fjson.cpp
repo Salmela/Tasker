@@ -430,61 +430,72 @@ bool Reader::hasNextElement()
 }
 
 
-Writer::Writer(std::ostream &stream)
+Writer::Writer(std::ostream &stream, bool doPretty)
 	:mStream(stream)
 {
-	mState = S_START;
+	mState = S_INIT;
+	mDoPrettyPrint = doPretty;
+	mIndentLevel = 0;
+	mIndentWidth = 1;
+	mIndentChar = '\t';
+}
+
+Writer::~Writer()
+{
+	if(mDoPrettyPrint) {
+		mStream.put('\n');
+	}
+}
+
+void Writer::valueStateTransition()
+{
+	if(mState != S_INIT && mState != S_SEPARATOR) throw "bad state";
+	mState = S_VALUE;
 }
 
 void Writer::write(void *value)
 {
-	if(mState == S_VALUE) throw "bad state";
+	valueStateTransition();
 	if(value) throw "Expected NULL";
 	mStream << "null";
 }
 
 void Writer::write(bool value)
 {
-	if(mState == S_VALUE) throw "bad state";
+	valueStateTransition();
 	mStream << (value ? "true" : "false");
-	mState = S_VALUE;
 }
 
 void Writer::write(int value)
 {
-	if(mState == S_VALUE) throw "bad state";
+	valueStateTransition();
 	mStream << value;
-	mState = S_VALUE;
 }
 
 void Writer::write(unsigned int value)
 {
-	if(mState == S_VALUE) throw "bad state";
+	valueStateTransition();
 	mStream << value;
-	mState = S_VALUE;
 }
 
 void Writer::write(float value)
 {
-	if(mState == S_VALUE) throw "bad state";
+	valueStateTransition();
 	mStream << value;
-	mState = S_VALUE;
 }
 
 void Writer::write(double value)
 {
-	if(mState == S_VALUE) throw "bad state";
+	valueStateTransition();
 	mStream << value;
-	mState = S_VALUE;
 }
 
 void Writer::write(std::string value)
 {
-	if(mState == S_VALUE) throw "bad state";
+	valueStateTransition();
 	mStream.put('"');
 	mStream << value;
 	mStream.put('"');
-	mState = S_VALUE;
 }
 
 void Writer::startObject()
@@ -492,11 +503,15 @@ void Writer::startObject()
 	if(mState == S_VALUE) throw "bad state";
 	mStream.put('{');
 	mState = S_START;
+	mIndentLevel++;
+	doIndentation(true);
 }
 
 void Writer::endObject()
 {
 	if(mState == S_SEPARATOR) throw "bad state";
+	mIndentLevel--;
+	doIndentation(true);
 	mStream.put('}');
 	mState = S_VALUE;
 }
@@ -505,12 +520,16 @@ void Writer::writeObjectKey(std::string key)
 {
 	if(mState == S_VALUE) {
 		mStream.put(',');
+		doIndentation(true);
 	} else if(mState == S_SEPARATOR) {
 		throw "bad state";
 	}
 	mState = S_SEPARATOR;
 	write(key);
 	mStream.put(':');
+	if(mDoPrettyPrint) {
+		mStream.put(' ');
+	}
 	mState = S_SEPARATOR;
 }
 
@@ -519,11 +538,16 @@ void Writer::startArray()
 	if(mState == S_VALUE) throw "bad state";
 	mStream.put('[');
 	mState = S_START;
+	mIndentLevel++;
 }
 
 void Writer::endArray()
 {
 	if(mState == S_SEPARATOR) throw "bad state";
+	mIndentLevel--;
+	if(mState != S_START) {
+		doIndentation(true);
+	}
 	mStream.put(']');
 	mState = S_VALUE;
 }
@@ -535,6 +559,18 @@ void Writer::startNextElement()
 		mStream.put(',');
 	}
 	mState = S_SEPARATOR;
+	doIndentation(true);
+}
+
+void Writer::doIndentation(bool lineFeed) const
+{
+	if(!mDoPrettyPrint) {
+		return;
+	}
+	if(lineFeed) {
+		mStream << "\n";
+	}
+	mStream << std::string(mIndentLevel * mIndentWidth, mIndentChar);
 }
 
 };
