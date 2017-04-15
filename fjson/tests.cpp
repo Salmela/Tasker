@@ -262,6 +262,27 @@ static bool readMixed()
 	res &= (val == 2);
 	res &= (json->readObjectKey(key) == false);
 
+	createReader("{\"test\":[[1],[]], \"abc\": \"a\"}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->startArray();
+	res &= (json->hasNextElement() == true);
+	json->startArray();
+	res &= (json->hasNextElement() == true);
+	json->read(val);
+	res &= (val == 1);
+	res &= (json->hasNextElement() == false);
+	res &= (json->hasNextElement() == true);
+	json->startArray();
+	res &= (json->hasNextElement() == false);
+	res &= (json->hasNextElement() == false);
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "abc");
+	json->read(key);
+	res &= (key == "a");
+	res &= (json->readObjectKey(key) == false);
+
 	return res;
 }
 

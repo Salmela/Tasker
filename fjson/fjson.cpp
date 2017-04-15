@@ -424,6 +424,7 @@ bool Reader::hasNextElement()
 	} else {
 		throw "Expected ']' or ',' character.";
 	}
+	afterStartBracket = false;
 	tokenize();
 	return res;
 }

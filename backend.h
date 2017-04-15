@@ -24,6 +24,9 @@ public:
 	void ref();
 	void unref();
 	void free();
+
+	static TaskState *read(FJson::Reader *reader);
+	void write(FJson::Writer *writer) const;
 private:
 	TaskState(std::string name);
 
@@ -50,6 +53,7 @@ public:
 
 	static TaskType *read(Project *project, FJson::Reader *reader);
 	void write(FJson::Writer *writer) const;
+	int getStateId(TaskState *state) const;
 
 private:
 	Project *mProject;
@@ -58,6 +62,7 @@ private:
 	TaskState *mStartState;
 	std::set<TaskState*> mEndStates;
 	std::map<TaskState*, std::set<TaskState*> > mStateMap;
+	std::vector<TaskState*> mStates;
 };
 
 class Task
