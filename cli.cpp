@@ -132,6 +132,23 @@ bool Main::init(int argc, char **argv)
 	return true;
 }
 
+void Main::readline(std::string cmd, std::string &command, std::vector<std::string> &args)
+{
+	std::cout << cmd << " ";
+
+	std::string line;
+	std::getline(std::cin, line);
+	std::istringstream iss(line);
+
+	iss >> command;
+
+	args.clear();
+	std::string arg;
+	while(iss >> arg) {
+		args.push_back(arg);
+	}
+}
+
 void Main::newView(View *view)
 {
 	mViewStack.push_back(view);
@@ -180,20 +197,11 @@ void TaskListView::render(CliInterface *parent)
 	for (Backend::Task *t : mList->all()) {
 		std::cout << " " << i++ << ". " << t->getName() << "\n";
 	}
-	std::cout << "Command> ";
-
-	std::string line;
-	std::getline(std::cin, line);
-	std::istringstream iss(line);
 
 	std::string command;
-	iss >> command;
-
 	std::vector<std::string> args;
-	std::string arg;
-	while(iss >> arg) {
-		args.push_back(arg);
-	}
+
+	Main::readline("Command>", command, args);
 
 	if (command == "o" || command == "open") {
 		int taskIndex;
@@ -292,10 +300,11 @@ void TaskView::render(CliInterface *parent)
 	std::cout << "\n[" << mTask->getState()->getName() << "]\n";
 	std::cout << "\n" << mTask->getDescription() << "\n";
 
-	std::cout << "Command> ";
-
 	std::string command;
-	std::getline(std::cin, command);
+	std::vector<std::string> args;
+
+	Main::readline("Command>", command, args);
+
 	if(command == "e" || command == "exit") {
 		parent->deleteView(this);
 	} else if(command == "c" || command == "comment") {
@@ -303,13 +312,29 @@ void TaskView::render(CliInterface *parent)
 		std::cout << "Commenting not implemented yet";
 	} else if(command == "s" || command == "state") {
 		//Change the state
+		if(args.size() != 1) {
+			std::cout << "Usage: state NEW_STATE\n";
+			return;
+		}
+		auto possibles = mTask->getType()->possibleChanges(mTask->getState());
+		for(auto *state : possibles) {
+			if(state->getName() == args[0]) {
+				mTask->setState(state);
+				return;
+			}
+		}
+		std::cerr << "No possible state " << args[0] << "\n";
+		std::cout << "Allowed next states are:\n";
+		for(auto *state : possibles) {
+			std::cout << "  " << state->getName() << "\n";
+		}
 	} else if(command == "r" || command == "rename") {
 		mTask->setName(trim(openEditor(mTask->getName())));
 		//Rename the task
 	} else if(command == "d" || command == "description") {
 		//Change description
-		std::string text = openEditor("test");
-		std::cout << trim(text) << "\n";
+		std::string text = openEditor(mTask->getDescription());
+		mTask->setDescription(trim(text));
 	}
 }
 

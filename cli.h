@@ -63,6 +63,8 @@ public:
 	void deleteView(View *view) override;
 	Backend::Project *getProject() override;
 	View *getActiveView();
+
+	static void readline(std::string cmd, std::string &command, std::vector<std::string> &args);
 private:
 	Backend::Project *mProject;
 	TaskListView mListView;

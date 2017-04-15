@@ -351,6 +351,11 @@ std::string Task::getName() const
 	return mName;
 }
 
+void Task::setDescription(std::string text)
+{
+	mDesc = text;
+}
+
 std::string Task::getDescription() const
 {
 	return mDesc;
