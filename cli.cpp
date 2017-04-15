@@ -87,6 +87,7 @@ static std::string openEditor(std::string text) {
 	return content;
 }
 
+// From https://stackoverflow.com/questions/ TODO find it
 static std::string trim(const std::string &str)
 {
 	auto wsFront = std::find_if_not(str.begin(), str.end(),
@@ -194,7 +195,8 @@ void TaskListView::render(CliInterface *parent)
 	}
 
 	unsigned int i = 1;
-	for (Backend::Task *t : mList->all()) {
+	auto taskList = mList->getFiltered(Backend::TaskFilter::isOpen(true));
+	for (Backend::Task *t : taskList) {
 		std::cout << " " << i++ << ". " << t->getName() << "\n";
 	}
 
@@ -208,11 +210,11 @@ void TaskListView::render(CliInterface *parent)
 		std::istringstream iss(args[0]);
 		iss >> taskIndex;
 
-		if (taskIndex < 1 && taskIndex > (int)mList->getSize()) {
+		if (taskIndex < 1 && taskIndex > (int)taskList.size()) {
 			std::cerr << "Task index is out-of-bounds.\n";
 			return;
 		}
-		parent->newView(new TaskView(mList->all()[taskIndex - 1]));
+		parent->newView(new TaskView(taskList[taskIndex - 1]));
 	} else if (command == "n" || command == "new") {
 		parent->newView(new CreateTaskView());
 	} else if (command == "t" || command == "type") {
