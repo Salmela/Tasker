@@ -54,6 +54,7 @@ public:
 	static TaskType *read(Project *project, FJson::Reader *reader);
 	void write(FJson::Writer *writer) const;
 	int getStateId(TaskState *state) const;
+	TaskState *getStateById(unsigned int index) const;
 
 private:
 	Project *mProject;

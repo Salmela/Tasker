@@ -325,6 +325,14 @@ int TaskType::getStateId(TaskState *state) const
 	return iter - mStates.begin();
 }
 
+TaskState *TaskType::getStateById(unsigned int index) const
+{
+	if(index >= mStates.size()) {
+		return NULL;
+	}
+	return mStates[index];
+}
+
 /// Task
 
 Task::Task(Project *project, std::string name)
@@ -379,6 +387,7 @@ TaskState *Task::getState() const
 Task *Task::read(Project *project, FJson::Reader *reader)
 {
 	auto *task = new Task(project, "");
+	int state;
 
 	reader->startObject();
 	std::string key;
@@ -397,15 +406,14 @@ Task *Task::read(Project *project, FJson::Reader *reader)
 			reader->read(type);
 			task->mType = project->getType(type);
 		} else if(key == "state") {
-			int state;
 			reader->read(state);
-			task->mState = NULL;
 		} else if(key == "closed") {
 			reader->read(task->mClosed);
 		} else {
 			std::cout << "Unknown\n";
 		}
 	}
+	task->mState = task->mType->getStateById(state);
 	return task;
 }
 
