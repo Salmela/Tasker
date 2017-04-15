@@ -3,6 +3,9 @@
 namespace Tasker {
 namespace Cli {
 
+static std::string openEditor(std::string text);
+static std::string trim(const std::string &str);
+
 class View;
 
 class CliInterface {

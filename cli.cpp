@@ -17,8 +17,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#include <cctype>
+#include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 #include <string>
 #include <exception>
 #include <unistd.h>
@@ -55,6 +58,46 @@ public:
 private:
 	const char *mMessage;
 };
+
+static std::string openEditor(std::string text) {
+	const char *c_editor = getenv("EDITOR");
+	std::string editor;
+	if(!c_editor || !*c_editor) {
+		editor = "sensible-editor";
+	} else {
+		editor = c_editor;
+	}
+	char filename[] = "/tmp/tasker.XXXXXX";
+	if(mkstemp(filename) == -1) {
+		std::cerr << "Unable to create tmp file.\n";
+		return text;
+	}
+	std::ofstream stream(filename);
+	stream << text;
+	stream.close();
+
+	system((editor + " " + filename).c_str());
+
+	std::ifstream istream(filename);
+	std::string content((std::istreambuf_iterator<char>(istream)),
+		(std::istreambuf_iterator<char>()));
+	istream.close();
+
+	unlink(filename);
+	return content;
+}
+
+static std::string trim(const std::string &str)
+{
+	auto wsFront = std::find_if_not(str.begin(), str.end(),
+		(int(&)(int))std::isspace);
+	auto wsBack = std::find_if_not(str.rbegin(), str.rend(),
+		(int(&)(int))std::isspace);
+
+	return (wsBack.base() <= wsFront ?
+		std::string() :
+		std::string(wsFront, wsBack.base()));
+}
 
 Main::Main()
 	:mListView()
@@ -255,6 +298,18 @@ void TaskView::render(CliInterface *parent)
 	std::getline(std::cin, command);
 	if(command == "e" || command == "exit") {
 		parent->deleteView(this);
+	} else if(command == "c" || command == "comment") {
+		//Comment
+		std::cout << "Commenting not implemented yet";
+	} else if(command == "s" || command == "state") {
+		//Change the state
+	} else if(command == "r" || command == "rename") {
+		mTask->setName(trim(openEditor(mTask->getName())));
+		//Rename the task
+	} else if(command == "d" || command == "description") {
+		//Change description
+		std::string text = openEditor("test");
+		std::cout << trim(text) << "\n";
 	}
 }
 
