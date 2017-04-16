@@ -39,6 +39,7 @@ class TaskType
 {
 public:
 	TaskType(Project *project, std::string name);
+	~TaskType();
 	void rename(std::string newName);
 	std::string getName() const;
 	void setStartState(TaskState *state);
@@ -129,6 +130,7 @@ private:
 class TaskList
 {
 public:
+	~TaskList();
 	void addTask(Task *task);
 	void removeTask(Task *task);
 	const std::vector<Task*> all() const;
@@ -167,6 +169,7 @@ public:
 	static void setTaskerData(std::string path, std::string source);
 private:
 	Config();
+	~Config();
 	static Config mConfig;
 
 	struct Repository {

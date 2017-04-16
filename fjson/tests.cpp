@@ -473,5 +473,7 @@ int main(int argc, char **argv)
 	success = badWriteMixed();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
+	if(out) delete out;
+
 	delete json;
 }

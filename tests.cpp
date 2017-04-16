@@ -78,9 +78,6 @@ bool createTaskTypeAndDelete() {
 	res &= type.isClosed(endState);
 	res &= !type.isIncomplete();
 
-	delete state;
-	delete endState;
-
 	return res;
 }
 

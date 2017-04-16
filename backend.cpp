@@ -119,6 +119,13 @@ TaskType::TaskType(Project *project, std::string name)
 	}
 }
 
+TaskType::~TaskType()
+{
+	for(auto state : mStates) {
+		delete state;
+	}
+}
+
 void TaskType::rename(std::string newName)
 {
 	mName = newName;
@@ -554,6 +561,13 @@ bool TaskFilter::operator()(const Task *task)
 
 /// TaskList
 
+TaskList::~TaskList()
+{
+	for(auto task : mTasks) {
+		delete task;
+	}
+}
+
 void TaskList::addTask(Task *task)
 {
 	mTasks.push_back(task);
@@ -697,6 +711,12 @@ Config Config::mConfig;
 
 Config::Config() {
 	this->readHomeConfig();
+}
+
+Config::~Config() {
+	for(auto repo : mRepositories) {
+		delete repo;
+	}
 }
 
 static bool startsWith(std::string &prefix, std::string &value) {
