@@ -106,9 +106,20 @@ Main::Main()
 	newView(&mListView);
 }
 
+Main::~Main()
+{
+	for(View *view : mViewStack) {
+		delete view;
+	}
+	delete mProject;
+}
+
 bool Main::init(int argc, char **argv)
 {
-	const char *cwd = get_current_dir_name();
+	char *cwd_tmp = get_current_dir_name();
+	std::string cwd = cwd_tmp;
+	free(cwd_tmp);
+
 	mProject = Backend::Project::open(cwd);
 	if(mProject) {
 		return true;
@@ -162,6 +173,9 @@ void Main::deleteView(View *view)
 	}
 
 	mViewStack.pop_back();
+	if(view != &mListView) {
+		delete view;
+	}
 }
 
 bool Main::mainLoop()

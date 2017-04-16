@@ -19,6 +19,7 @@ public:
 class View
 {
 public:
+	virtual ~View() {};
 	virtual void render(CliInterface *parent) = 0;
 };
 
@@ -56,6 +57,7 @@ class Main : public CliInterface
 {
 public:
 	Main();
+	~Main();
 	bool init(int argc, char **argv);
 
 	bool mainLoop();

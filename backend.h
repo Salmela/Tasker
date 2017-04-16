@@ -143,8 +143,8 @@ private:
 class Project
 {
 public:
-	static Project *create(const char *dirname);
-	static Project *open(const char *dirname);
+	static Project *create(std::string dirname);
+	static Project *open(std::string dirname);
 
 	Project(); //< open for tests
 	~Project();

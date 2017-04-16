@@ -599,14 +599,14 @@ unsigned int TaskList::getSize() const
 
 /// Project
 
-Project *Project::create(const char *dirname)
+Project *Project::create(std::string dirname)
 {
 	auto project = new Project();
 	project->mDirname = dirname;
 	return project;
 }
 
-Project *Project::open(const char *dirname)
+Project *Project::open(std::string dirname)
 {
 	auto project = new Project();
 	project->mDirname = Config::getTaskerData(dirname);
