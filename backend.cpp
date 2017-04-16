@@ -229,7 +229,9 @@ bool TaskType::isIncomplete() const
 
 TaskType *TaskType::read(Project *project, FJson::Reader &in)
 {
-	TaskType *type = new TaskType(project, "");
+	TaskType *type = new TaskType(NULL, "");
+	type->mProject = project;
+
 	in.startObject();
 	std::string key;
 
