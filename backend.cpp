@@ -21,6 +21,7 @@
 #include <exception>
 #include <fstream>
 #include <sstream>
+#include <string.h>
 
 #include "backend.h"
 
@@ -513,7 +514,7 @@ TaskFilter TaskFilter::isOpen(bool open)
 	return f;
 }
 
-TaskFilter TaskFilter::hasState(TaskState *state)
+TaskFilter TaskFilter::hasState(std::string state)
 {
 	TaskFilter f(HAS_STATE);
 	f.mState = state;
@@ -523,8 +524,15 @@ TaskFilter TaskFilter::hasState(TaskState *state)
 TaskFilter TaskFilter::search(std::string query)
 {
 	TaskFilter f(SEARCH);
-	f.mQuery = query;
+	f.mQuery = lower(query);
 	return f;
+}
+
+TaskFilter *TaskFilter::allocate(TaskFilter filter)
+{
+	TaskFilter *obj = new TaskFilter(NOT_OF);
+	*obj = filter;
+	return obj;
 }
 
 TaskFilter::TaskFilter(FilterType type)
@@ -545,11 +553,17 @@ bool TaskFilter::getValue(const Task *task)
 			return mFirst->getValue(task) &&
 				mSecond->getValue(task);
 		case IS_OPEN:
-			return !task->isClosed();
+			return mIsOpen == !task->isClosed();
 		case HAS_STATE:
-			return task->getState() == mState;
+			return task->getState()->getName() == mState;
 		case SEARCH:
-			return false;//TODO implement
+			if(lower(task->getName()).find(mQuery) != std::string::npos) {
+				return true;
+			}
+			if(lower(task->getDescription()).find(mQuery) != std::string::npos) {
+				return true;
+			}
+			return false;
 	}
 	return true;
 }
@@ -557,6 +571,261 @@ bool TaskFilter::getValue(const Task *task)
 bool TaskFilter::operator()(const Task *task)
 {
 	return getValue(task);
+}
+
+std::string TaskFilter::lower(std::string str)
+{
+	std::string copy = str;
+	for(auto p = copy.begin(); p != copy.end(); p++) {
+		*p = tolower(*p);//TODO warning this will fail on unicode characters!!!!
+	}
+	return copy;
+}
+
+/// Search
+
+std::string Search::parseString(std::istream &stream)
+{
+	int val = stream.get();
+	if(val != '"') {
+		throw "Expected quote";
+	}
+
+	std::ostringstream ostream;
+	while((val = stream.get()) != -1) {
+		if(val == '\\') {
+			val = stream.get();
+			if(val == -1) {
+				break;
+			} else if(val == '"') {
+				ostream.put('"');
+			} else if(val == '\\') {
+				ostream.put('\\');
+			} else {
+				throw "Invalid escape sequence";
+			}
+			continue;
+		} else if(val == '"') {
+			break;
+		}
+		ostream.put((char)val);
+	}
+
+	if(val != '"') {
+		throw "Expected quote";
+	}
+	return ostream.str();
+}
+
+TaskFilter *Search::readTerm(std::istream &stream)
+{
+	int val = stream.get();
+	char buf[256];
+	buf[0] = val;
+
+	TaskFilter *filter = NULL;;
+
+	switch(val) {
+		case 'o':
+			stream.get(buf + 1, 4);
+			if(strcmp(buf, "open") == 0) {
+				filter = TaskFilter::allocate(TaskFilter::isOpen(true));
+			} else {
+				throw "Unknown is keyword";
+			}
+			break;
+		case 'c':
+			stream.get(buf + 1, 6);
+			if(strcmp(buf, "closed") == 0) {
+				filter = TaskFilter::allocate(TaskFilter::isOpen(false));
+			} else {
+				throw "Unknown is keyword";
+			}
+			break;
+		case 's':
+			stream.get(buf + 1, 5);
+			if(strcmp(buf, "state") == 0) {
+				if(stream.get() == '(') {
+					throw "Expected '('";
+				}
+				std::string str = Search::parseString(stream);
+				filter = TaskFilter::allocate(TaskFilter::hasState(str));
+				if(stream.get() == ')') {
+					throw "Expected ')'";
+				}
+			}
+			break;
+		default:
+			throw "Unknown keyword";
+			break;
+	}
+	if(!filter) {
+		throw "inalid state";
+	}
+	return filter;
+}
+
+void Search::processStack(Data *data, char nextOperator)
+{
+	unsigned char precedence[128] = {0};
+	precedence['('] = 0;
+	precedence['='] = 1;
+	precedence['!'] = 2;
+	precedence['|'] = 3;
+	precedence['&'] = 4;
+	precedence[')'] = 5;
+	precedence['\0'] = 6;
+
+	// TODO WIP improve error handling!
+
+	if(data->mOpStack.empty()) {
+		data->mOpStack.push_back(nextOperator);
+		return;
+	}
+
+	int current = data->mOpStack.back();
+
+	while(current != '(' && precedence[(int)nextOperator] > precedence[current]) {
+		TaskFilter *filter = NULL, *a, *b;
+#define popValue() data->mValueStack.back(); data->mValueStack.pop_back()
+		switch(current) {
+			case ')':
+				break;
+			case '(':
+				filter = popValue();
+				break;
+			case '!':
+				a = popValue();
+				filter = TaskFilter::allocate(TaskFilter::notOf(a));
+				break;
+			case '|':
+				a = popValue();
+				b = popValue();
+				filter = TaskFilter::allocate(TaskFilter::orOf(a, b));
+				break;
+			case '&':
+				a = popValue();
+				b = popValue();
+				filter = TaskFilter::allocate(TaskFilter::andOf(a, b));
+				break;
+			default:
+				throw "invalid operation";
+				break;
+		}
+		if(!filter) {
+			break;
+		}
+		data->mOpStack.pop_back();
+		data->mValueStack.push_back(filter);
+		if(data->mOpStack.empty()) {
+			break;
+		}
+		current = data->mOpStack.back();
+	}
+	if(nextOperator == ')') {
+		if(data->mOpStack.back() != '(') {
+			throw "Mismatched parenthesis\n";
+		}
+		data->mOpStack.pop_back();
+		return;
+	}
+	data->mOpStack.push_back(nextOperator);
+}
+
+TaskFilter Search::create(std::string query)
+{
+	std::istringstream stream(query);
+	struct Data data;
+	int val;
+
+	std::vector<char> opStack;
+	std::vector<TaskFilter*> valueStack;
+
+	while((val = stream.get()) != -1) {
+		char buf[4];
+		buf[0] = val;
+		switch(val) {
+			case '"': {
+				stream.unget();
+				std::string value = parseString(stream);
+				TaskFilter *filter = TaskFilter::allocate(TaskFilter::search(value));
+				data.mValueStack.push_back(filter);
+			} break;
+			case '(':
+			case ')':
+			case '|'://or
+				processStack(&data, val);
+				break;
+			case ',':
+			case '&':
+				processStack(&data, '&');
+				break;
+			case '!':
+			case '-':
+				data.mOpStack.push_back('!');
+				break;
+			case 'a':
+			case 'A':
+				stream.get(buf + 1, 3);
+				if(strcmp(buf, "and") == 0 ||
+				   strcmp(buf, "AND") == 0) {
+					processStack(&data, '&');
+					break;
+				}
+				stream.putback(buf[2]);
+				stream.putback(buf[1]);
+				stream.putback(buf[0]);
+				data.mValueStack.push_back(readTerm(stream));
+				break;
+			case 'o':
+			case 'O':
+				stream.get(buf + 1, 2);
+				if(strcmp(buf, "or") == 0 ||
+				   strcmp(buf, "OR") == 0) {
+					processStack(&data, '|');
+					break;
+				}
+				stream.putback(buf[1]);
+				stream.putback(buf[0]);
+				data.mValueStack.push_back(readTerm(stream));
+				break;
+			case 'n':
+			case 'N':
+				stream.get(buf + 1, 3);
+				if(strcmp(buf, "not") == 0 ||
+				   strcmp(buf, "NOT") == 0) {
+					data.mOpStack.push_back('!');
+					break;
+				}
+				stream.putback(buf[2]);
+				stream.putback(buf[1]);
+				stream.putback(buf[0]);
+				data.mValueStack.push_back(readTerm(stream));
+				break;
+			case ' ':
+				break;
+			case '\t':
+				break;
+			default:
+				stream.unget();
+				data.mValueStack.push_back(readTerm(stream));
+				break;
+		}
+	}
+
+	processStack(&data, '\0');
+	data.mOpStack.pop_back();
+
+	if(data.mValueStack.size() != 1) {
+		std::cerr << "Too many values in stack\n";
+		throw "";
+	}
+	if(!data.mOpStack.empty()) {
+		std::cerr << "Unprocessed operators left\n";
+		throw "";
+	}
+
+	return *data.mValueStack[0];
 }
 
 /// TaskList

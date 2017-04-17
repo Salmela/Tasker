@@ -199,6 +199,16 @@ Backend::Project *Main::getProject()
 
 /// TaskListView
 
+TaskListView::TaskListView()
+	:mFilter(Backend::TaskFilter::isOpen(true))
+{
+}
+
+void TaskListView::setFilter(Backend::TaskFilter filter)
+{
+	mFilter = filter;
+}
+
 void TaskListView::render(CliInterface *parent)
 {
 	auto *mList = parent->getProject()->getTaskList();
@@ -209,7 +219,7 @@ void TaskListView::render(CliInterface *parent)
 	}
 
 	unsigned int i = 1;
-	auto taskList = mList->getFiltered(Backend::TaskFilter::isOpen(true));
+	auto taskList = mList->getFiltered(mFilter);
 	for (Backend::Task *t : taskList) {
 		std::cout << " " << i++ << ". " << t->getName() << "\n";
 	}
@@ -231,6 +241,15 @@ void TaskListView::render(CliInterface *parent)
 		parent->newView(new TaskView(taskList[taskIndex - 1]));
 	} else if (command == "n" || command == "new") {
 		parent->newView(new CreateTaskView());
+	} else if (command == "s" || command == "search") {
+		std::ostringstream oss;
+		std::string separator = "";
+		for(std::string str : args) {
+			oss << separator << str;
+			separator = " ";
+		}
+		auto search = Backend::Search::create(oss.str());
+		setFilter(search);
 	} else if (command == "t" || command == "type") {
 		if (args.size() != 1) {
 			std::cout << "USAGE: type NAME\n";

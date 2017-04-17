@@ -50,7 +50,11 @@ public:
 class TaskListView : public View
 {
 public:
+	TaskListView();
+	void setFilter(Backend::TaskFilter filter);
 	void render(CliInterface *parent) override;
+private:
+	Backend::TaskFilter mFilter;
 };
 
 class Main : public CliInterface

@@ -105,7 +105,7 @@ bool addAndRemoveTask() {
 	return list.getSize() == 0;
 }
 
-bool filterTask() {
+bool filterTasks() {
 	Backend::TaskList list;
 
 	Backend::TaskType type(NULL, "type");
@@ -128,14 +128,14 @@ bool filterTask() {
 
 	bool res = list.getSize() == 2;
 
-	auto tasks = list.getFiltered(Backend::TaskFilter::hasState(endState));
+	auto tasks = list.getFiltered(Backend::TaskFilter::hasState("start"));
 	res &= tasks.size() == 1;
 
 	tasks = list.getFiltered(Backend::TaskFilter::isOpen(false));
 	res &= tasks.size() == 1;
 
 	auto f1 = Backend::TaskFilter::isOpen(true);
-	auto f2 = Backend::TaskFilter::hasState(endState);
+	auto f2 = Backend::TaskFilter::hasState("end");
 	tasks = list.getFiltered(Backend::TaskFilter::orOf(&f1, &f2));
 	res &= tasks.size() == 2;
 
@@ -145,6 +145,83 @@ bool filterTask() {
 	auto f3 = Backend::TaskFilter::notOf(&f1);
 	tasks = list.getFiltered(Backend::TaskFilter::andOf(&f3, &f2));
 	res &= tasks.size() == 1;
+
+	return res;
+}
+
+bool searchTasks() {
+	Backend::TaskList list;
+
+	Backend::TaskType type(NULL, "type");
+
+	auto *state = Backend::TaskState::create("start");
+	auto *endState = Backend::TaskState::create("end");
+
+	type.setStartState(state);
+	type.setEndStates({endState});
+	type.setTransition(state, endState);
+
+	auto *task = new Backend::Task(NULL, "test lol");
+	task->setType(&type);
+	list.addTask(task);
+
+	auto *task2 = new Backend::Task(NULL, "closed lol");
+	task2->setType(&type);
+	task2->setState(endState);
+	list.addTask(task2);
+
+	auto *task3 = new Backend::Task(NULL, "closed");
+	task3->setType(&type);
+	task3->setState(endState);
+	list.addTask(task3);
+
+	bool res = true;
+
+	auto search = Backend::Search::create("\"test\"");
+	auto tasks = list.getFiltered(search);
+	res &= tasks.size() == 1;
+	res &= tasks[0] == task;
+
+	search = Backend::Search::create("- \"test\"");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 2;
+	res &= tasks[0] == task2;
+	res &= tasks[1] == task3;
+
+	search = Backend::Search::create("\"test\" and \"closed\"");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 0;
+
+	search = Backend::Search::create("\"test\" or \"closed\"");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 3;
+
+	search = Backend::Search::create("\"lol\" and not \"test\"");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 1;
+	res &= tasks[0] == task2;
+
+	search = Backend::Search::create("not \"test\" and \"lol\"");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 1;
+	res &= tasks[0] == task2;
+
+	search = Backend::Search::create("not (\"test\" and \"lol\")");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 2;
+	res &= tasks[0] == task2;
+	res &= tasks[1] == task3;
+
+	search = Backend::Search::create("open");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 1;
+	res &= tasks[0] == task;
+
+	search = Backend::Search::create("closed");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 2;
+	res &= tasks[0] == task2;
+	res &= tasks[1] == task3;
 
 	return res;
 }
@@ -170,7 +247,9 @@ int testMain()
 
 	success = addAndRemoveTask();
 	std::cout << (success ? "Success" : "Failure") << "\n";
-	success = filterTask();
+	success = filterTasks();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = searchTasks();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	return 0;
 }

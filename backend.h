@@ -104,12 +104,14 @@ public:
 	static TaskFilter orOf(TaskFilter *a, TaskFilter *b);
 	static TaskFilter andOf(TaskFilter *a, TaskFilter *b);
 	static TaskFilter isOpen(bool open);
-	static TaskFilter hasState(TaskState *state);
+	static TaskFilter hasState(std::string state);
 	static TaskFilter search(std::string query);
+	static TaskFilter *allocate(TaskFilter filter);
 
 	bool getValue(const Task *task);
 	bool operator()(const Task *task);
 private:
+	static std::string lower(std::string str);
 	enum FilterType {
 		NOT_OF,
 		OR_OF,
@@ -124,7 +126,21 @@ private:
 	bool mIsOpen;
 	std::string mQuery;
 	TaskFilter *mFirst, *mSecond;
-	TaskState *mState;
+	std::string mState;
+};
+
+class Search
+{
+public:
+	static TaskFilter create(std::string query);
+private:
+	struct Data {
+		std::vector<char> mOpStack;
+		std::vector<TaskFilter*> mValueStack;
+	};
+	static std::string parseString(std::istream &stream);
+	static TaskFilter *readTerm(std::istream &stream);
+	static void processStack(Data *data, char nextOperator);
 };
 
 class TaskList
