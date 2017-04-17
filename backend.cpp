@@ -655,12 +655,12 @@ TaskFilter *Search::readTerm(std::istream &stream)
 		case 's':
 			stream.get(buf + 1, 5);
 			if(strcmp(buf, "state") == 0) {
-				if(stream.get() == '(') {
+				if(stream.get() != '(') {
 					throw "Expected '('";
 				}
 				std::string str = Search::parseString(stream);
 				filter = TaskFilter::allocate(TaskFilter::hasState(str));
-				if(stream.get() == ')') {
+				if(stream.get() != ')') {
 					throw "Expected ')'";
 				}
 			}

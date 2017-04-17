@@ -223,6 +223,12 @@ bool searchTasks() {
 	res &= tasks[0] == task2;
 	res &= tasks[1] == task3;
 
+	search = Backend::Search::create("state(\"end\")");
+	tasks = list.getFiltered(search);
+	res &= tasks.size() == 2;
+	res &= tasks[0] == task2;
+	res &= tasks[1] == task3;
+
 	return res;
 }
 
