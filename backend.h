@@ -82,6 +82,9 @@ public:
 	TaskType *getType() const;
 	TaskState *getState() const;
 
+	void addSubTask(Task *task);
+	const std::vector<Task*> getSubTasks() const;
+
 	bool isClosed() const;
 	static Task *read(Project *project, FJson::Reader &in);
 	void write(FJson::Writer &out) const;
@@ -94,7 +97,7 @@ private:
 	TaskState *mState;
 	bool mClosed;
 
-	std::vector<Task*> mSubTask;
+	std::vector<Task*> mSubTasks;
 };
 
 struct TaskFilter

@@ -14,6 +14,7 @@ public:
 	//virtual void replaceView(View *view) = 0;
 	virtual void deleteView(View *view) = 0;
 	virtual Backend::Project *getProject() = 0;
+	virtual void quit() = 0;
 };
 
 class View
@@ -44,7 +45,10 @@ private:
 class CreateTaskView : public View
 {
 public:
+	CreateTaskView(Backend::Task *parent = NULL);
 	void render(CliInterface *parent) override;
+private:
+	Backend::Task *mParent;
 };
 
 class TaskListView : public View
@@ -68,6 +72,7 @@ public:
 	void newView(View *view) override;
 	void deleteView(View *view) override;
 	Backend::Project *getProject() override;
+	void quit() override;
 	View *getActiveView();
 
 	static void readline(std::string cmd, std::string &command, std::vector<std::string> &args);

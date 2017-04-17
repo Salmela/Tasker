@@ -417,6 +417,16 @@ TaskState *Task::getState() const
 	return mState;
 }
 
+void Task::addSubTask(Task *task)
+{
+	mSubTasks.push_back(task);
+}
+
+const std::vector<Task*> Task::getSubTasks() const
+{
+	return mSubTasks;
+}
+
 bool Task::isClosed() const
 {
 	return mType->isClosed(mState);

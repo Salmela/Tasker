@@ -108,9 +108,7 @@ Main::Main()
 
 Main::~Main()
 {
-	for(View *view : mViewStack) {
-		delete view;
-	}
+	quit();
 	delete mProject;
 }
 
@@ -195,6 +193,16 @@ View *Main::getActiveView()
 Backend::Project *Main::getProject()
 {
 	return mProject;
+}
+
+void Main::quit()
+{
+	for(View *view : mViewStack) {
+		if(&mListView != view) {
+			delete view;
+		}
+	}
+	mViewStack.clear();
 }
 
 /// TaskListView
@@ -291,6 +299,11 @@ void ModifyTaskTypeView::render(CliInterface *parent)
 }
 
 /// CreateListView
+CreateTaskView::CreateTaskView(Backend::Task *parent)
+{
+	mParent = parent;
+}
+
 void CreateTaskView::render(CliInterface *parent)
 {
 	std::string name, type;
@@ -314,7 +327,11 @@ void CreateTaskView::render(CliInterface *parent)
 	auto *task = new Backend::Task(prj, name);
 	task->setType(task_type);
 
-	parent->getProject()->getTaskList()->addTask(task);
+	if(mParent) {
+		mParent->addSubTask(task);
+	} else {
+		parent->getProject()->getTaskList()->addTask(task);
+	}
 	parent->deleteView(this);
 	parent->newView(new TaskView(task));
 }
@@ -335,6 +352,18 @@ void TaskView::render(CliInterface *parent)
 	std::cout << "\n[" << mTask->getState()->getName() << "]\n";
 	std::cout << "\n" << mTask->getDescription() << "\n";
 
+	auto subTasks = mTask->getSubTasks();
+
+	if(!subTasks.empty()) {
+		std::cout << "Sub-tasks:\n";
+
+		unsigned int index = 1;
+		for(auto task : subTasks) {
+			std::cout << " " << index++ << ". ";
+			std::cout << task->getName() << "\n";
+		}
+	}
+
 	std::string command;
 	std::vector<std::string> args;
 
@@ -342,6 +371,10 @@ void TaskView::render(CliInterface *parent)
 
 	if(command == "e" || command == "exit") {
 		parent->deleteView(this);
+	} else if(command == "q" || command == "quit") {
+		parent->quit();
+	} else if(command == "n" || command == "new") {
+		parent->newView(new CreateTaskView(mTask));
 	} else if(command == "c" || command == "comment") {
 		//Comment
 		std::cout << "Commenting not implemented yet";
