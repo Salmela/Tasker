@@ -170,10 +170,12 @@ public:
 	void write();//< TODO make private
 private:
 	std::string mDirname;
+	std::string mTaskFile;
 	std::map<std::string, TaskType*> mTypes;
 	TaskList mList;
 
 	bool read();
+	void writeTasks();
 
 	friend TaskType;
 };

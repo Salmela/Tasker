@@ -929,15 +929,29 @@ void Project::write()
 	}
 	out.endObject();
 
-	out.writeObjectKey("tasks");
+	if(mTaskFile.empty()) {
+		mTaskFile = "tasks.json";
+	}
+
+	out.writeObjectKey("task-path");
+	out.write(mTaskFile);
+	out.endObject();
+
+	writeTasks();
+}
+
+void Project::writeTasks()
+{
+	std::ofstream stream(mDirname + "/" + mTaskFile);
+
+	FJson::Writer out(stream, true);
+
 	out.startArray();
 	for(const auto task : mList.all()) {
 		out.startNextElement();
 		task->write(out);
 	}
 	out.endArray();
-
-	out.endObject();
 }
 
 bool Project::read()
@@ -967,8 +981,22 @@ bool Project::read()
 				auto *task = Task::read(this, in);
 				mList.addTask(task);
 			}
+		} else if(key == "task-path") {
+			in.read(mTaskFile);
 		} else {
 			std::cout << "Unknown\n";
+		}
+	}
+
+	if(!mTaskFile.empty()) {
+		std::ifstream stream(mDirname + "/" + mTaskFile);
+		if(!stream.is_open()) return false;
+		FJson::Reader in(stream);
+
+		in.startArray();
+		while(in.hasNextElement()) {
+			auto *task = Task::read(this, in);
+			mList.addTask(task);
 		}
 	}
 	return true;
