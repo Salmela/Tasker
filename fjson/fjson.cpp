@@ -26,7 +26,6 @@ namespace FJson {
 Reader::Reader(std::istream &stream)
 	:mStream(stream)
 {
-	mStackSize = 0;
 	afterStartBracket = false;
 	tokenize();
 }
@@ -347,10 +346,10 @@ void Reader::read(std::string &value)
 void Reader::startObject()
 {
 	if(mToken.type == NUL) {
-		mStack[mStackSize++] = 'O';
+		mStack.push_back('O');
 		return;
 	} else if(mToken.type == OBJECT) {
-		mStack[mStackSize++] = '{';
+		mStack.push_back('{');
 		afterStartBracket = true;
 	} else {
 		std::cerr << "Expected object.\n";
@@ -360,7 +359,7 @@ void Reader::startObject()
 
 bool Reader::readObjectKey(std::string &key)
 {
-	char c = mStack[mStackSize - 1];
+	char c = mStack.back();
 	if(c == 'O') {
 		return false;
 	} else if(c != '{') {
@@ -370,7 +369,7 @@ bool Reader::readObjectKey(std::string &key)
 	if(mToken.type == END_OBJECT) {
 		afterStartBracket = false;
 		res = false;
-		mStackSize--;
+		mStack.pop_back();
 	} else if(afterStartBracket || mToken.type == SEPARATOR) {
 		res = true;
 		if(!afterStartBracket) {
@@ -391,10 +390,10 @@ bool Reader::readObjectKey(std::string &key)
 void Reader::startArray()
 {
 	if(mToken.type == NUL) {
-		mStack[mStackSize++] = 'A';
+		mStack.push_back('A');
 		return;
 	} else if(mToken.type == ARRAY) {
-		mStack[mStackSize++] = '[';
+		mStack.push_back('[');
 		afterStartBracket = true;
 	} else {
 		std::cerr << "Expected array.\n";
@@ -404,7 +403,7 @@ void Reader::startArray()
 
 bool Reader::hasNextElement()
 {
-	char c = mStack[mStackSize - 1];
+	char c = mStack.back();
 	if(c == 'A') {
 		return false;
 	} else if(c != '[') {
@@ -414,7 +413,7 @@ bool Reader::hasNextElement()
 	if(mToken.type == ARRAY) {
 		return true;
 	} else if(mToken.type == END_ARRAY) {
-		mStackSize--;
+		mStack.pop_back();
 		res = false;
 	} else if(mToken.type == SEPARATOR) {
 		res = true;
@@ -435,13 +434,13 @@ Writer::Writer(std::ostream &stream, bool doPretty)
 {
 	mState = S_INIT;
 	mDoPrettyPrint = doPretty;
-	mIndentLevel = 0;
 	mIndentWidth = 1;
 	mIndentChar = '\t';
 }
 
 Writer::~Writer()
 {
+	if(!mStack.empty()) throw "Some objects or arrays are not closed";
 	if(mDoPrettyPrint) {
 		mStream.put('\n');
 	}
@@ -503,14 +502,15 @@ void Writer::startObject()
 	if(mState == S_VALUE) throw "bad state";
 	mStream.put('{');
 	mState = S_START;
-	mIndentLevel++;
+	mStack.push_back('{');
 	doIndentation(true);
 }
 
 void Writer::endObject()
 {
 	if(mState == S_SEPARATOR) throw "bad state";
-	mIndentLevel--;
+	if(mStack.empty() || mStack.back() != '{') throw "Mismatching api calls";
+	mStack.pop_back();
 	doIndentation(true);
 	mStream.put('}');
 	mState = S_VALUE;
@@ -518,6 +518,7 @@ void Writer::endObject()
 
 void Writer::writeObjectKey(std::string key)
 {
+	if(mStack.empty() || mStack.back() != '{') throw "Allowed only in inside a object";
 	if(mState == S_VALUE) {
 		mStream.put(',');
 		doIndentation(true);
@@ -538,13 +539,14 @@ void Writer::startArray()
 	if(mState == S_VALUE) throw "bad state";
 	mStream.put('[');
 	mState = S_START;
-	mIndentLevel++;
+	mStack.push_back('[');
 }
 
 void Writer::endArray()
 {
 	if(mState == S_SEPARATOR) throw "bad state";
-	mIndentLevel--;
+	if(mStack.empty() || mStack.back() != '[') throw "Mismatching api calls";
+	mStack.pop_back();
 	if(mState != S_START) {
 		doIndentation(true);
 	}
@@ -555,6 +557,7 @@ void Writer::endArray()
 void Writer::startNextElement()
 {
 	if(mState == S_SEPARATOR) throw "bad state";
+	if(mStack.empty() || mStack.back() != '[') throw "Allowed only in inside a array";
 	if(mState != S_START) {
 		mStream.put(',');
 	}
@@ -570,7 +573,7 @@ void Writer::doIndentation(bool lineFeed) const
 	if(lineFeed) {
 		mStream << "\n";
 	}
-	mStream << std::string(mIndentLevel * mIndentWidth, mIndentChar);
+	mStream << std::string(mStack.size() * mIndentWidth, mIndentChar);
 }
 
 };

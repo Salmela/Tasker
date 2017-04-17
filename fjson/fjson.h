@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <iostream>
 
 namespace FJson {
@@ -58,8 +59,7 @@ private:
 	Token mToken;
 	bool afterStartBracket;
 
-	int mStackSize;
-	char mStack[128];//list of '{' or '[' or 'A' or 'O' characters
+	std::vector<char> mStack;//list of '{' or '[' or 'A' or 'O' characters
 
 	int tokenize();
 	long parseLong(int c);
@@ -94,8 +94,8 @@ private:
 	void valueStateTransition();
 
 	bool mDoPrettyPrint;
-	unsigned int mIndentLevel;
 	unsigned int mIndentWidth;
+	std::vector<char> mStack;
 	char mIndentChar;
 	State mState;
 	std::ostream &mStream;

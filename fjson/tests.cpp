@@ -429,6 +429,25 @@ static bool badWriteMixed()
 	} catch(...) {
 		success = true;
 	}
+	out->endArray();
+	res &= success;
+
+	createWriter();
+	success = false;
+	try {
+		out->writeObjectKey("test");
+	} catch(...) {
+		success = true;
+	}
+	res &= success;
+
+	createWriter();
+	success = false;
+	try {
+		out->startNextElement();
+	} catch(...) {
+		success = true;
+	}
 	res &= success;
 
 	return res;
