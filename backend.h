@@ -100,21 +100,28 @@ private:
 	std::vector<Task*> mSubTasks;
 };
 
-struct TaskFilter
+class TaskFilter
 {
 public:
-	static TaskFilter notOf(TaskFilter *a);
-	static TaskFilter orOf(TaskFilter *a, TaskFilter *b);
-	static TaskFilter andOf(TaskFilter *a, TaskFilter *b);
-	static TaskFilter isOpen(bool open);
-	static TaskFilter hasState(std::string state);
-	static TaskFilter search(std::string query);
-	static TaskFilter *allocate(TaskFilter filter);
+	static TaskFilter *notOf(TaskFilter *a);
+	static TaskFilter *orOf(TaskFilter *a, TaskFilter *b);
+	static TaskFilter *andOf(TaskFilter *a, TaskFilter *b);
+	static TaskFilter *isOpen(bool open);
+	static TaskFilter *hasState(std::string state);
+	static TaskFilter *search(std::string query);
 
+	struct TaskFilterWrapper {
+		bool operator()(const Task *task);
+		TaskFilter *mFilter;
+	};
+
+	~TaskFilter();
+	TaskFilter *clone() const;
+	TaskFilter::TaskFilterWrapper wrap();
 	bool getValue(const Task *task);
-	bool operator()(const Task *task);
 private:
 	static std::string lower(std::string str);
+
 	enum FilterType {
 		NOT_OF,
 		OR_OF,
@@ -135,7 +142,7 @@ private:
 class Search
 {
 public:
-	static TaskFilter create(std::string query);
+	static TaskFilter *create(std::string query);
 private:
 	struct Data {
 		std::vector<char> mOpStack;
@@ -153,7 +160,7 @@ public:
 	void addTask(Task *task);
 	void removeTask(Task *task);
 	const std::vector<Task*> all() const;
-	const std::vector<Task*> getFiltered(TaskFilter filter) const;
+	const std::vector<Task*> getFiltered(TaskFilter *filter) const;
 	unsigned int getSize() const;
 private:
 	std::vector<Task*> mTasks;

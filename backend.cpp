@@ -494,60 +494,77 @@ void Task::write(FJson::Writer &out) const
 
 /// TaskFilter
 
-TaskFilter TaskFilter::notOf(TaskFilter *a)
-{
-	TaskFilter f(NOT_OF);
-	f.mFirst = a;
-	return f;
-}
-
-TaskFilter TaskFilter::orOf(TaskFilter *a, TaskFilter *b)
-{
-	TaskFilter f(OR_OF);
-	f.mFirst = a;
-	f.mSecond = b;
-	return f;
-}
-
-TaskFilter TaskFilter::andOf(TaskFilter *a, TaskFilter *b)
-{
-	TaskFilter f(AND_OF);
-	f.mFirst = a;
-	f.mSecond = b;
-	return f;
-}
-
-TaskFilter TaskFilter::isOpen(bool open)
-{
-	TaskFilter f(IS_OPEN);
-	f.mIsOpen = open;
-	return f;
-}
-
-TaskFilter TaskFilter::hasState(std::string state)
-{
-	TaskFilter f(HAS_STATE);
-	f.mState = state;
-	return f;
-}
-
-TaskFilter TaskFilter::search(std::string query)
-{
-	TaskFilter f(SEARCH);
-	f.mQuery = lower(query);
-	return f;
-}
-
-TaskFilter *TaskFilter::allocate(TaskFilter filter)
-{
-	TaskFilter *obj = new TaskFilter(NOT_OF);
-	*obj = filter;
-	return obj;
-}
-
 TaskFilter::TaskFilter(FilterType type)
 {
 	mType = type;
+	mFirst = NULL;
+	mSecond = NULL;
+}
+
+TaskFilter::~TaskFilter()
+{
+	if(mFirst) delete mFirst;
+	if(mSecond) delete mSecond;
+}
+
+TaskFilter *TaskFilter::notOf(TaskFilter *a)
+{
+	auto *f = new TaskFilter(NOT_OF);
+	f->mFirst = a;
+	return f;
+}
+
+TaskFilter *TaskFilter::orOf(TaskFilter *a, TaskFilter *b)
+{
+	auto *f = new TaskFilter(OR_OF);
+	f->mFirst = a;
+	f->mSecond = b;
+	return f;
+}
+
+TaskFilter *TaskFilter::andOf(TaskFilter *a, TaskFilter *b)
+{
+	auto *f = new TaskFilter(AND_OF);
+	f->mFirst = a;
+	f->mSecond = b;
+	return f;
+}
+
+TaskFilter *TaskFilter::isOpen(bool open)
+{
+	auto *f = new TaskFilter(IS_OPEN);
+	f->mIsOpen = open;
+	return f;
+}
+
+TaskFilter *TaskFilter::hasState(std::string state)
+{
+	auto *f = new TaskFilter(HAS_STATE);
+	f->mState = state;
+	return f;
+}
+
+TaskFilter *TaskFilter::search(std::string query)
+{
+	auto *f = new TaskFilter(SEARCH);
+	f->mQuery = lower(query);
+	return f;
+}
+
+TaskFilter *TaskFilter::clone() const
+{
+	auto *f = new TaskFilter(this->mType);
+	*f = *this;
+	if(f->mFirst) f->mFirst = f->mFirst->clone();
+	if(f->mSecond) f->mSecond = f->mSecond->clone();
+	return f;
+}
+
+TaskFilter::TaskFilterWrapper TaskFilter::wrap()
+{
+	TaskFilter::TaskFilterWrapper wrap;
+	wrap.mFilter = this;
+	return wrap;
 }
 
 bool TaskFilter::getValue(const Task *task)
@@ -578,11 +595,6 @@ bool TaskFilter::getValue(const Task *task)
 	return true;
 }
 
-bool TaskFilter::operator()(const Task *task)
-{
-	return getValue(task);
-}
-
 std::string TaskFilter::lower(std::string str)
 {
 	std::string copy = str;
@@ -590,6 +602,11 @@ std::string TaskFilter::lower(std::string str)
 		*p = tolower(*p);//TODO warning this will fail on unicode characters!!!!
 	}
 	return copy;
+}
+
+bool TaskFilter::TaskFilterWrapper::operator()(const Task *task)
+{
+	return mFilter->getValue(task);
 }
 
 /// Search
@@ -639,7 +656,7 @@ TaskFilter *Search::readTerm(std::istream &stream)
 		case 'o':
 			stream.get(buf + 1, 4);
 			if(strcmp(buf, "open") == 0) {
-				filter = TaskFilter::allocate(TaskFilter::isOpen(true));
+				filter = TaskFilter::isOpen(true);
 			} else {
 				throw "Unknown is keyword";
 			}
@@ -647,7 +664,7 @@ TaskFilter *Search::readTerm(std::istream &stream)
 		case 'c':
 			stream.get(buf + 1, 6);
 			if(strcmp(buf, "closed") == 0) {
-				filter = TaskFilter::allocate(TaskFilter::isOpen(false));
+				filter = TaskFilter::isOpen(false);
 			} else {
 				throw "Unknown is keyword";
 			}
@@ -659,7 +676,7 @@ TaskFilter *Search::readTerm(std::istream &stream)
 					throw "Expected '('";
 				}
 				std::string str = Search::parseString(stream);
-				filter = TaskFilter::allocate(TaskFilter::hasState(str));
+				filter = TaskFilter::hasState(str);
 				if(stream.get() != ')') {
 					throw "Expected ')'";
 				}
@@ -706,17 +723,17 @@ void Search::processStack(Data *data, char nextOperator)
 				break;
 			case '!':
 				a = popValue();
-				filter = TaskFilter::allocate(TaskFilter::notOf(a));
+				filter = TaskFilter::notOf(a);
 				break;
 			case '|':
 				a = popValue();
 				b = popValue();
-				filter = TaskFilter::allocate(TaskFilter::orOf(a, b));
+				filter = TaskFilter::orOf(a, b);
 				break;
 			case '&':
 				a = popValue();
 				b = popValue();
-				filter = TaskFilter::allocate(TaskFilter::andOf(a, b));
+				filter = TaskFilter::andOf(a, b);
 				break;
 			default:
 				throw "invalid operation";
@@ -742,7 +759,7 @@ void Search::processStack(Data *data, char nextOperator)
 	data->mOpStack.push_back(nextOperator);
 }
 
-TaskFilter Search::create(std::string query)
+TaskFilter *Search::create(std::string query)
 {
 	std::istringstream stream(query);
 	struct Data data;
@@ -758,7 +775,7 @@ TaskFilter Search::create(std::string query)
 			case '"': {
 				stream.unget();
 				std::string value = parseString(stream);
-				TaskFilter *filter = TaskFilter::allocate(TaskFilter::search(value));
+				TaskFilter *filter = TaskFilter::search(value);
 				data.mValueStack.push_back(filter);
 			} break;
 			case '(':
@@ -835,7 +852,7 @@ TaskFilter Search::create(std::string query)
 		throw "";
 	}
 
-	return *data.mValueStack[0];
+	return data.mValueStack[0];
 }
 
 /// TaskList
@@ -863,10 +880,10 @@ const std::vector<Task*> TaskList::all() const
 	return mTasks;
 }
 
-const std::vector<Task*> TaskList::getFiltered(TaskFilter filter) const
+const std::vector<Task*> TaskList::getFiltered(TaskFilter *filter) const
 {
 	std::vector<Task*> newList(std::min((int)mTasks.size(), 256));
-	auto it = std::copy_if(mTasks.begin(), mTasks.end(), newList.begin(), filter);
+	auto it = std::copy_if(mTasks.begin(), mTasks.end(), newList.begin(), filter->wrap());
 	newList.resize(std::distance(newList.begin(), it));
 	return newList;
 }

@@ -212,7 +212,7 @@ TaskListView::TaskListView()
 {
 }
 
-void TaskListView::setFilter(Backend::TaskFilter filter)
+void TaskListView::setFilter(Backend::TaskFilter *filter)
 {
 	mFilter = filter;
 }
@@ -256,7 +256,7 @@ void TaskListView::render(CliInterface *parent)
 			oss << separator << str;
 			separator = " ";
 		}
-		auto search = Backend::Search::create(oss.str());
+		auto *search = Backend::Search::create(oss.str());
 		setFilter(search);
 	} else if (command == "t" || command == "type") {
 		if (args.size() != 1) {
