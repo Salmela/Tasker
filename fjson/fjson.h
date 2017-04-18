@@ -48,6 +48,7 @@ public:
 	void read(float &value);
 	void read(double &value);
 	void read(std::string &value);
+	void skipValue();
 
 	void startObject();
 	bool readObjectKey(std::string &key);

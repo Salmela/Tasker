@@ -309,7 +309,17 @@ void Reader::read(int &value)
 
 void Reader::read(unsigned int &value)
 {
-	value = 0;
+	if(mToken.type == INTEGER) {
+		if(mToken.value.integer < 0) {
+			std::cerr << "Expected positive integer.\n";
+			value = 0;
+		} else {
+			value = (unsigned int)mToken.value.integer;
+		}
+	} else {
+		std::cerr << "Expected positive integer.\n";
+	}
+	tokenize();
 }
 
 void Reader::read(float &value)
@@ -341,6 +351,39 @@ void Reader::read(std::string &value)
 		std::cerr << "Expected string.\n";
 	}
 	tokenize();
+}
+
+void Reader::skipValue()
+{
+	std::string key;
+	switch(mToken.type) {
+		case STRING:
+		case BOOLEAN:
+		case NUL:
+		case INTEGER:
+		case REAL:
+			tokenize();
+			break;
+		case OBJECT:
+			startObject();
+			while(readObjectKey(key)) {
+				skipValue();
+			}
+			break;
+		case ARRAY:
+			startArray();
+			while(hasNextElement()) {
+				skipValue();
+			}
+			break;
+		case END_OBJECT:
+		case END_ARRAY:
+		case SEPARATOR:
+		case COLON:
+		case END:
+			throw "Invalid state";
+			break;
+	}
 }
 
 void Reader::startObject()

@@ -286,6 +286,34 @@ static bool readMixed()
 	return res;
 }
 
+static bool skipValues()
+{
+	std::string key;
+	bool res = true;
+
+	createReader("{\"test\":[[1],[]], \"abc\": \"a\"}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->skipValue();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "abc");
+	json->skipValue();
+	res &= (json->readObjectKey(key) == false);
+
+	createReader("{\"test\": {\"xyz\": [1]}, \"abc\": true}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->skipValue();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "abc");
+	json->skipValue();
+	res &= (json->readObjectKey(key) == false);
+
+	return res;
+}
+
 std::ostringstream ostream;
 static Writer *out = NULL;
 
@@ -474,6 +502,8 @@ int main(int argc, char **argv)
 	success = readObject();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = readMixed();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = skipValues();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	std::cout << "Write tests\n";
