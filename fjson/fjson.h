@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <iostream>
 
 namespace FJson {
@@ -39,9 +40,32 @@ struct Token {
 	} value;
 };
 
+class TokenStream {
+public:
+	virtual ~TokenStream() {};
+	virtual void next(Token *token) {};
+};
+
+class IstreamTokenStream : public TokenStream {
+public:
+	IstreamTokenStream(std::istream &stream);
+	void next(Token *token) override;
+private:
+	std::istream &mStream;
+	Token *mToken;
+
+	void tokenize();
+	long parseLong(int c);
+	double fast10pow(long exp);
+	void parseNumber();
+	void parseString();
+	void generateUtf8(std::ostream &builder, int value);
+};
+
 class Reader {
 public:
 	Reader(std::istream &stream);
+	~Reader();
 
 	void read(bool &value);
 	void read(int &value);
@@ -59,16 +83,11 @@ public:
 private:
 	std::istream &mStream;
 	Token mToken;
+	TokenStream *mTokenizer;
 	bool afterStartBracket;
 
 	std::vector<char> mStack;//list of '{' or '[' or 'A' or 'O' characters
-
-	int tokenize();
-	long parseLong(int c);
-	double fast10pow(long exp);
-	void parseNumber();
-	void parseString();
-	void generateUtf8(std::ostream &builder, int value);
+	void tokenize();
 };
 
 class Writer {

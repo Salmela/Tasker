@@ -23,10 +23,14 @@
 
 namespace FJson {
 
-Reader::Reader(std::istream &stream)
-	:mStream(stream), mToken(NUL)
+IstreamTokenStream::IstreamTokenStream(std::istream &stream)
+	:mStream(stream)
 {
-	afterStartBracket = false;
+}
+
+void IstreamTokenStream::next(Token *token)
+{
+	mToken = token;
 	tokenize();
 }
 
@@ -34,7 +38,7 @@ Reader::Reader(std::istream &stream)
 #define MAX_INT ((long)(unsigned long)0x7fffffffffffffff)
 #define MIN_INT ((long)(unsigned long)0x8000000000000000)
 
-long Reader::parseLong(int c)
+long IstreamTokenStream::parseLong(int c)
 {
 	long value = 0;
 	do {
@@ -52,7 +56,7 @@ long Reader::parseLong(int c)
 	return value;
 }
 
-double Reader::fast10pow(long exp) {
+double IstreamTokenStream::fast10pow(long exp) {
 	//modular exponiation algorithm
 	double res = 1.0;
 	double base = (exp > 0) ? 10.0 : 0.1;
@@ -69,7 +73,7 @@ double Reader::fast10pow(long exp) {
 	return res;
 }
 
-void Reader::parseNumber()
+void IstreamTokenStream::parseNumber()
 {
 	int c = mStream.get();
 	long value = 0;
@@ -124,16 +128,16 @@ void Reader::parseNumber()
 
 	if(!isFloat) {
 		value *= sign;
-		mToken.value.integer = value;
-		mToken.type = INTEGER;
+		mToken->value.integer = value;
+		mToken->type = INTEGER;
 	} else {
 		fValue *= sign;
-		mToken.value.real = fValue;
-		mToken.type = REAL;
+		mToken->value.real = fValue;
+		mToken->type = REAL;
 	}
 }
 
-void Reader::generateUtf8(std::ostream &builder, int value)
+void IstreamTokenStream::generateUtf8(std::ostream &builder, int value)
 {
 	if(value < 0x80) {
 		builder << (char)value;
@@ -154,7 +158,7 @@ void Reader::generateUtf8(std::ostream &builder, int value)
 	}
 }
 
-void Reader::parseString()
+void IstreamTokenStream::parseString()
 {
 	int c = mStream.get();
 	if(c != '\"') {
@@ -208,14 +212,14 @@ void Reader::parseString()
 		c = mStream.get();
 	}
 
-	mToken.string = builder.str();
+	mToken->string = builder.str();
 
 	if(c != '\"') {
 		throw "expected '\"'(quote)";
 	}
 }
 
-int Reader::tokenize()
+void IstreamTokenStream::tokenize()
 {
 	//TODO skip whitespaces
 	char buf[10];
@@ -227,53 +231,53 @@ int Reader::tokenize()
 
 	switch(c) {
 	case '{':
-		mToken.type = OBJECT;
+		mToken->type = OBJECT;
 		break;
 	case '}':
-		mToken.type = END_OBJECT;
+		mToken->type = END_OBJECT;
 		break;
 	case '[':
-		mToken.type = ARRAY;
+		mToken->type = ARRAY;
 		break;
 	case ']':
-		mToken.type = END_ARRAY;
+		mToken->type = END_ARRAY;
 		break;
 	case ':':
-		mToken.type = COLON;
+		mToken->type = COLON;
 		break;
 	case '\"':
-		mToken.type = STRING;
+		mToken->type = STRING;
 		mStream.unget();
 		parseString();
 		break;
 	case ',':
-		mToken.type = SEPARATOR;
+		mToken->type = SEPARATOR;
 		break;
 	case 't':
-		mToken.type = BOOLEAN;
-		mToken.value.boolean = true;
+		mToken->type = BOOLEAN;
+		mToken->value.boolean = true;
 		mStream.get(buf + 1, 4);
 		if(memcmp(buf, "true", 4) != 0) {
 			throw "invalid token";
 		}
 		break;
 	case 'f':
-		mToken.type = BOOLEAN;
-		mToken.value.boolean = false;
+		mToken->type = BOOLEAN;
+		mToken->value.boolean = false;
 		mStream.get(buf + 1, 5);
 		if(memcmp(buf, "false", 5) != 0) {
 			throw "invalid token";
 		}
 		break;
 	case 'n':
-		mToken.type = NUL;
+		mToken->type = NUL;
 		mStream.get(buf + 1, 4);
 		if(memcmp(buf, "null", 4) != 0) {
 			throw "invalid token";
 		}
 		break;
 	case -1:
-		mToken.type = END;
+		mToken->type = END;
 		break;
 	default:
 		if(c == '-' || isAsciiDigit(c)) {
@@ -284,7 +288,26 @@ int Reader::tokenize()
 		}
 		break;
 	}
-	return 0;
+}
+
+/// Reader
+
+Reader::Reader(std::istream &stream)
+	:mStream(stream), mToken(NUL)
+{
+	afterStartBracket = false;
+	mTokenizer = new IstreamTokenStream(stream);
+	tokenize();
+}
+
+Reader::~Reader()
+{
+	delete mTokenizer;
+}
+
+void Reader::tokenize()
+{
+	mTokenizer->next(&mToken);
 }
 
 void Reader::read(bool &value)
@@ -471,6 +494,7 @@ bool Reader::hasNextElement()
 	return res;
 }
 
+/// Writer
 
 Writer::Writer(std::ostream &stream, bool doPretty)
 	:mStream(stream)
