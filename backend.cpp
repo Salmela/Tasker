@@ -277,7 +277,7 @@ TaskType *TaskType::read(Project *project, FJson::Reader &in)
 				type->mStates.push_back(state);
 			}
 		} else {
-			throw "Unknown task";
+			in.skipValue();
 		}
 	}
 	type->mStartState = type->mStates[startState];
@@ -461,7 +461,7 @@ Task *Task::read(Project *project, FJson::Reader &in)
 		} else if(key == "closed") {
 			in.read(task->mClosed);
 		} else {
-			std::cout << "Unknown\n";
+			in.skipValue();
 		}
 	}
 	task->mState = task->mType->getStateById(state);
@@ -1011,7 +1011,7 @@ bool Project::read()
 		} else if(key == "task-path") {
 			in.read(mTaskFile);
 		} else {
-			std::cout << "Unknown\n";
+			in.skipValue();
 		}
 	}
 

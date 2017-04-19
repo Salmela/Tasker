@@ -1,4 +1,4 @@
-CXXFLAGS := -c -g -Wall -ggdb3 -std=gnu++11
+CXXFLAGS := -c -g -Wall -ggdb3 -std=gnu++11 -Ofast
 LDFLAGS := -g
 
 FJSON_SOURCES := fjson/fjson.cpp
