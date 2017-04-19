@@ -317,12 +317,14 @@ static bool skipValues()
 std::ostringstream ostream;
 static Writer *out = NULL;
 
-static void createWriter()
+static void createWriter(bool doPretty = false);
+
+static void createWriter(bool doPretty)
 {
 	ostream.str("");
 	ostream.clear();
 	if(out) delete out;
-	out = new Writer(ostream);
+	out = new Writer(ostream, doPretty);
 }
 
 static bool writeInitialization()

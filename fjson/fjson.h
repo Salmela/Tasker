@@ -29,6 +29,7 @@ enum State {
 };
 
 struct Token {
+	Token(TokenType t) {type = t;};
 	TokenType type;
 	std::string string;
 	union {
@@ -93,6 +94,7 @@ public:
 private:
 	void doIndentation(bool lineFeed = false) const;
 	void valueStateTransition();
+	void writeToken(Token *token);
 
 	bool mDoPrettyPrint;
 	unsigned int mIndentWidth;

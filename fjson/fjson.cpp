@@ -24,7 +24,7 @@
 namespace FJson {
 
 Reader::Reader(std::istream &stream)
-	:mStream(stream)
+	:mStream(stream), mToken(NUL)
 {
 	afterStartBracket = false;
 	tokenize();
@@ -499,113 +499,180 @@ void Writer::write(void *value)
 {
 	valueStateTransition();
 	if(value) throw "Expected NULL";
-	mStream << "null";
+	Token t(NUL);
+	writeToken(&t);
 }
 
 void Writer::write(bool value)
 {
 	valueStateTransition();
-	mStream << (value ? "true" : "false");
+	Token t(BOOLEAN);
+	t.value.boolean = value;
+	writeToken(&t);
 }
 
 void Writer::write(int value)
 {
 	valueStateTransition();
-	mStream << value;
+	Token t(INTEGER);
+	t.value.integer = value;
+	writeToken(&t);
 }
 
 void Writer::write(unsigned int value)
 {
 	valueStateTransition();
-	mStream << value;
+	Token t(INTEGER);
+	t.value.integer = value;
+	writeToken(&t);
 }
 
 void Writer::write(float value)
 {
 	valueStateTransition();
-	mStream << value;
+	Token t(REAL);
+	t.value.real = value;
+	writeToken(&t);
 }
 
 void Writer::write(double value)
 {
 	valueStateTransition();
-	mStream << value;
+	Token t(REAL);
+	t.value.real = value;
+	writeToken(&t);
 }
 
 void Writer::write(std::string value)
 {
 	valueStateTransition();
-	mStream.put('"');
-	mStream << value;
-	mStream.put('"');
+	Token t(STRING);
+	t.string = value;
+	writeToken(&t);
 }
 
 void Writer::startObject()
 {
 	if(mState == S_VALUE) throw "bad state";
-	mStream.put('{');
-	mState = S_START;
-	mStack.push_back('{');
-	doIndentation(true);
+	Token t(OBJECT);
+	writeToken(&t);
 }
 
 void Writer::endObject()
 {
 	if(mState == S_SEPARATOR) throw "bad state";
 	if(mStack.empty() || mStack.back() != '{') throw "Mismatching api calls";
-	mStack.pop_back();
-	doIndentation(true);
-	mStream.put('}');
-	mState = S_VALUE;
+	Token t(END_OBJECT);
+	writeToken(&t);
 }
 
 void Writer::writeObjectKey(std::string key)
 {
 	if(mStack.empty() || mStack.back() != '{') throw "Allowed only in inside a object";
-	if(mState == S_VALUE) {
-		mStream.put(',');
-		doIndentation(true);
-	} else if(mState == S_SEPARATOR) {
+	if(mState == S_SEPARATOR) {
 		throw "bad state";
 	}
-	mState = S_SEPARATOR;
-	write(key);
-	mStream.put(':');
-	if(mDoPrettyPrint) {
-		mStream.put(' ');
-	}
-	mState = S_SEPARATOR;
+	Token t(SEPARATOR);
+	writeToken(&t);
+
+	Token t2(STRING);
+	t2.string = key;
+	writeToken(&t2);
+
+	Token t3(COLON);
+	writeToken(&t3);
 }
 
 void Writer::startArray()
 {
 	if(mState == S_VALUE) throw "bad state";
-	mStream.put('[');
-	mState = S_START;
-	mStack.push_back('[');
+	Token t(ARRAY);
+	writeToken(&t);
 }
 
 void Writer::endArray()
 {
 	if(mState == S_SEPARATOR) throw "bad state";
 	if(mStack.empty() || mStack.back() != '[') throw "Mismatching api calls";
-	mStack.pop_back();
-	if(mState != S_START) {
-		doIndentation(true);
-	}
-	mStream.put(']');
-	mState = S_VALUE;
+	Token t(END_ARRAY);
+	writeToken(&t);
 }
 
 void Writer::startNextElement()
 {
-	if(mState == S_SEPARATOR) throw "bad state";
 	if(mStack.empty() || mStack.back() != '[') throw "Allowed only in inside a array";
-	if(mState != S_START) {
-		mStream.put(',');
+	if(mState == S_SEPARATOR) {
+		throw "bad state";
 	}
-	mState = S_SEPARATOR;
-	doIndentation(true);
+	Token t(SEPARATOR);
+	writeToken(&t);
+}
+
+void Writer::writeToken(Token *token)
+{
+	State newState = S_VALUE;
+	switch(token->type) {
+		case STRING:
+			mStream.put('"');
+			mStream << token->string;
+			mStream.put('"');
+			break;
+		case BOOLEAN:
+			mStream << (token->value.boolean ? "true" : "false");
+			break;
+		case NUL:
+			mStream << "null";
+			break;
+		case INTEGER:
+			mStream << token->value.integer;
+			break;
+		case REAL:
+			mStream << token->value.real;
+			break;
+		case OBJECT:
+			mStream.put('{');
+			newState = S_START;
+			mStack.push_back('{');
+			break;
+		case ARRAY:
+			mStream.put('[');
+			newState = S_START;
+			mStack.push_back('[');
+			break;
+		case END_OBJECT:
+			mStack.pop_back();
+			doIndentation(true);
+			mStream.put('}');
+			newState = S_VALUE;
+			break;
+		case END_ARRAY:
+			mStack.pop_back();
+			if(mState != S_START) {//TODO TEST THIS
+				doIndentation(true);
+			}
+			mStream.put(']');
+			newState = S_VALUE;
+			break;
+		case SEPARATOR:
+			if(mState == S_VALUE) {
+				mStream.put(',');
+				doIndentation(true);
+			} else {
+				doIndentation(true);
+			}
+			newState = S_SEPARATOR;
+			break;
+		case COLON:
+			mStream.put(':');
+			if(mDoPrettyPrint) {
+				mStream.put(' ');
+			}
+			newState = S_SEPARATOR;
+			break;
+		case END:
+			break;
+	}
+	mState = newState;
 }
 
 void Writer::doIndentation(bool lineFeed) const
