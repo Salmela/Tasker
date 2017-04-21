@@ -270,6 +270,7 @@ void IstreamTokenStream::tokenize()
 		break;
 	case ',':
 		mToken->type = SEPARATOR;
+		mToken->value.boolean = true;
 		break;
 	case 't':
 		mToken->type = BOOLEAN;
@@ -317,11 +318,18 @@ TokenCache::TokenCache()
 
 void TokenCache::record(Token &token)
 {
+	if(token.type == SEPARATOR && mTokens.empty()) {
+		token.value.visible = false;
+	}
 	mTokens.push_back(token);
 }
 
 void TokenCache::next(Token *token)
 {
+	if(mIndex >= mTokens.size()) {
+		token->type = END;
+		return;
+	}
 	*token = mTokens[mIndex];
 	mIndex++;
 }
@@ -445,6 +453,7 @@ void Reader::skipValue(TokenCache *foreignValues)
 		mCache = foreignValues;
 		if(!mStack.empty() && mStack.back() == '{') {
 			Token t(SEPARATOR);
+			t.value.visible = !mAfterStartBracket;
 			mCache->record(t);
 
 			Token t2(STRING);
@@ -468,6 +477,7 @@ void Reader::skipValue(TokenCache *foreignValues)
 			startObject();
 			if(mCache && mToken.type != END_OBJECT) {
 				Token t(SEPARATOR);
+				t.value.visible = false;
 				mCache->record(t);
 			}
 			while(readObjectKey(key)) {
@@ -478,6 +488,7 @@ void Reader::skipValue(TokenCache *foreignValues)
 			startArray();
 			if(mCache && mToken.type != END_ARRAY) {
 				Token t(SEPARATOR);
+				t.value.visible = false;
 				mCache->record(t);
 			}
 			while(hasNextElement()) {
@@ -527,7 +538,7 @@ bool Reader::readObjectKey(std::string &key)
 		mStack.pop_back();
 	} else if(mAfterStartBracket || mToken.type == SEPARATOR) {
 		res = true;
-		if(!mAfterStartBracket) {
+		if(mTokenizer->isCache() || !mAfterStartBracket) {
 			tokenize();
 		}
 		mAfterStartBracket = false;
@@ -694,6 +705,7 @@ void Writer::writeObjectKey(std::string key)
 		throw ApiException("bad state");
 	}
 	Token t(SEPARATOR);
+	t.value.visible = (mState == S_VALUE);
 	writeToken(&t);
 
 	Token t2(STRING);
@@ -726,6 +738,7 @@ void Writer::startNextElement()
 		throw ApiException("bad state");
 	}
 	Token t(SEPARATOR);
+	t.value.visible = (mState == S_VALUE);
 	writeToken(&t);
 }
 
@@ -768,14 +781,14 @@ void Writer::writeToken(Token *token)
 			break;
 		case END_ARRAY:
 			mStack.pop_back();
-			if(mState != S_START) {//TODO TEST THIS
+			if(mState != S_START) {
 				doIndentation(true);
 			}
 			mStream.put(']');
 			newState = S_VALUE;
 			break;
 		case SEPARATOR:
-			if(mState == S_VALUE) {
+			if(token->value.visible) {
 				mStream.put(',');
 				doIndentation(true);
 			} else {

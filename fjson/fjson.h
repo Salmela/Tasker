@@ -34,6 +34,7 @@ struct Token {
 	TokenType type;
 	std::string string;
 	union {
+		bool visible;
 		bool boolean;
 		long integer;
 		double real;
@@ -44,6 +45,7 @@ class TokenStream {
 public:
 	virtual ~TokenStream() {};
 	virtual void next(Token *token) {};
+	virtual bool isCache() {return false;};
 };
 
 class IstreamTokenStream : public TokenStream {
@@ -67,6 +69,7 @@ public:
 	TokenCache();
 	void record(Token &token);
 	void next(Token *token) override;
+	bool isCache() override {return true;};
 	void dump() const;
 	std::vector<Token> getTokens() const;
 private:

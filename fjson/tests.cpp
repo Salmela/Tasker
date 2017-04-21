@@ -560,6 +560,31 @@ static bool replayForeignValues()
 	return res;
 }
 
+static bool readFromCache()
+{
+	std::string key;
+	bool res = true;
+
+	TokenCache *cache = new TokenCache;
+
+	createReader("{\"test\":1, \"abc\": \"a\"}");
+	json->skipValue(cache);
+
+	delete json;
+	json = new Reader(cache);
+
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->skipValue();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "abc");
+	json->skipValue();
+	res &= (json->readObjectKey(key) == false);
+
+	return res;
+}
+
 int main(int argc, char **argv)
 {
 	bool success;
@@ -601,7 +626,10 @@ int main(int argc, char **argv)
 	success = badWriteMixed();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
+	std::cout << "Mixed tests\n";
 	success = replayForeignValues();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+	success = readFromCache();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	if(out) delete out;
