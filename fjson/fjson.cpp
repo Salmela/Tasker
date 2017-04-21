@@ -23,6 +23,24 @@
 
 namespace FJson {
 
+class Exception : public std::exception {
+public:
+	Exception(std::string str) {mStr = str.c_str();};
+	Exception(const char *str) {mStr = str;};
+	const char *what() const noexcept override {return mStr;};
+private:
+	const char *mStr;
+};
+
+class ApiException : public std::exception {
+public:
+	ApiException(std::string str) {mStr = str.c_str();};
+	ApiException(const char *str) {mStr = str;};
+	const char *what() const noexcept override {return mStr;};
+private:
+	const char *mStr;
+};
+
 IstreamTokenStream::IstreamTokenStream(std::istream &stream)
 	:mStream(stream)
 {
@@ -154,7 +172,7 @@ void IstreamTokenStream::generateUtf8(std::ostream &builder, int value)
 		builder << (char)(0x80 | (value >> 6 & 0x3f));
 		builder << (char)(0x80 | (value & 0x3f));
 	} else {
-		throw "Invalid unicode character";
+		throw Exception("Invalid unicode character.");
 	}
 }
 
@@ -162,7 +180,7 @@ void IstreamTokenStream::parseString()
 {
 	int c = mStream.get();
 	if(c != '\"') {
-		throw "expected '\"'(quote)";
+		throw Exception("expected '\"'(quote).");
 	}
 
 	std::ostringstream builder;
@@ -200,7 +218,7 @@ void IstreamTokenStream::parseString()
 				break;
 			}
 			default:
-				throw "invalid escape sequence";
+				throw Exception("invalid escape sequence.");
 			}
 
 			if(c != -1) {
@@ -215,7 +233,7 @@ void IstreamTokenStream::parseString()
 	mToken->string = builder.str();
 
 	if(c != '\"') {
-		throw "expected '\"'(quote)";
+		throw Exception("expected '\"'(quote).");
 	}
 }
 
@@ -258,7 +276,7 @@ void IstreamTokenStream::tokenize()
 		mToken->value.boolean = true;
 		mStream.get(buf + 1, 4);
 		if(memcmp(buf, "true", 4) != 0) {
-			throw "invalid token";
+			throw Exception("invalid token");
 		}
 		break;
 	case 'f':
@@ -266,14 +284,14 @@ void IstreamTokenStream::tokenize()
 		mToken->value.boolean = false;
 		mStream.get(buf + 1, 5);
 		if(memcmp(buf, "false", 5) != 0) {
-			throw "invalid token";
+			throw Exception("invalid token");
 		}
 		break;
 	case 'n':
 		mToken->type = NUL;
 		mStream.get(buf + 1, 4);
 		if(memcmp(buf, "null", 4) != 0) {
-			throw "invalid token";
+			throw Exception("invalid token");
 		}
 		break;
 	case -1:
@@ -284,7 +302,7 @@ void IstreamTokenStream::tokenize()
 			mStream.unget();
 			parseNumber();
 		} else {
-			throw "invalid token";
+			throw Exception("invalid token");
 		}
 		break;
 	}
@@ -331,6 +349,15 @@ Reader::Reader(std::istream &stream)
 	tokenize();
 }
 
+Reader::Reader(TokenCache *cache)
+	:mToken(NUL)
+{
+	mAfterStartBracket = false;
+	mTokenizer = cache;
+	mCache = NULL;
+	tokenize();
+}
+
 Reader::~Reader()
 {
 	delete mTokenizer;
@@ -349,7 +376,7 @@ void Reader::read(bool &value)
 	if(mToken.type == BOOLEAN) {
 		value = (int)mToken.value.boolean;
 	} else {
-		std::cerr << "Expected boolean.\n";
+		throw Exception("Expected boolean.");
 	}
 	tokenize();
 }
@@ -359,7 +386,7 @@ void Reader::read(int &value)
 	if(mToken.type == INTEGER) {
 		value = (int)mToken.value.integer;
 	} else {
-		std::cerr << "Expected integer.\n";
+		throw Exception("Expected integer.");
 	}
 	tokenize();
 }
@@ -368,13 +395,13 @@ void Reader::read(unsigned int &value)
 {
 	if(mToken.type == INTEGER) {
 		if(mToken.value.integer < 0) {
-			std::cerr << "Expected positive integer.\n";
+			throw Exception("Expected positive integer.");
 			value = 0;
 		} else {
 			value = (unsigned int)mToken.value.integer;
 		}
 	} else {
-		std::cerr << "Expected positive integer.\n";
+		throw Exception("Expected positive integer.");
 	}
 	tokenize();
 }
@@ -393,7 +420,7 @@ void Reader::read(double &value)
 	} else if(mToken.type == INTEGER) {
 		value = mToken.value.integer;
 	} else {
-		std::cerr << "Expected floating point number.\n";
+		throw Exception("Expected floating point number.");
 	}
 	tokenize();
 }
@@ -405,7 +432,7 @@ void Reader::read(std::string &value)
 	} else if(mToken.type == NUL) {
 		value = "";
 	} else {
-		std::cerr << "Expected string.\n";
+		throw Exception("Expected string.");
 	}
 	tokenize();
 }
@@ -462,7 +489,7 @@ void Reader::skipValue(TokenCache *foreignValues)
 		case SEPARATOR:
 		case COLON:
 		case END:
-			throw "Invalid state";
+			throw ApiException("Invalid state.");
 			break;
 	}
 
@@ -480,7 +507,7 @@ void Reader::startObject()
 		mStack.push_back('{');
 		mAfterStartBracket = true;
 	} else {
-		std::cerr << "Expected object.\n";
+		throw Exception("Expected object.");
 	}
 	tokenize();
 }
@@ -491,7 +518,7 @@ bool Reader::readObjectKey(std::string &key)
 	if(c == 'O') {
 		return false;
 	} else if(c != '{') {
-		throw "Mismatching brackets";
+		throw Exception("Mismatching brackets.");
 	}
 	bool res;
 	if(mToken.type == END_OBJECT) {
@@ -507,10 +534,10 @@ bool Reader::readObjectKey(std::string &key)
 		read(key);
 		mCurrentKey = key;
 		if(mToken.type != COLON) {
-			throw "Expected ':'";
+			throw Exception("Expected ':'.");
 		}
 	} else {
-		throw "Expected '}' or ',' character.";
+		throw Exception("Expected '}' or ',' character.");
 	}
 	tokenize();
 	return res;
@@ -525,7 +552,7 @@ void Reader::startArray()
 		mStack.push_back('[');
 		mAfterStartBracket = true;
 	} else {
-		std::cerr << "Expected array.\n";
+		throw Exception("Expected array.");
 	}
 	tokenize();
 }
@@ -536,7 +563,7 @@ bool Reader::hasNextElement()
 	if(c == 'A') {
 		return false;
 	} else if(c != '[') {
-		throw "Mismatching brackets";
+		throw Exception("Mismatching brackets.");
 	}
 	bool res;
 	if(mToken.type == ARRAY) {
@@ -550,7 +577,7 @@ bool Reader::hasNextElement()
 		mAfterStartBracket = false;
 		return true;
 	} else {
-		throw "Expected ']' or ',' character.";
+		throw Exception("Expected ']' or ',' character.");
 	}
 	mAfterStartBracket = false;
 	tokenize();
@@ -570,7 +597,7 @@ Writer::Writer(std::ostream &stream, bool doPretty)
 
 Writer::~Writer()
 {
-	if(!mStack.empty()) throw "Some objects or arrays are not closed";
+	if(!mStack.empty()) throw ApiException("Some objects or arrays are not closed.");
 	if(mDoPrettyPrint) {
 		mStream.put('\n');
 	}
@@ -578,14 +605,14 @@ Writer::~Writer()
 
 void Writer::valueStateTransition()
 {
-	if(mState != S_INIT && mState != S_SEPARATOR) throw "bad state";
+	if(mState != S_INIT && mState != S_SEPARATOR) throw ApiException("bad state");
 	mState = S_VALUE;
 }
 
 void Writer::write(void *value)
 {
 	valueStateTransition();
-	if(value) throw "Expected NULL";
+	if(value) throw ApiException("Expected NULL.");
 	Token t(NUL);
 	writeToken(&t);
 }
@@ -647,24 +674,24 @@ void Writer::write(TokenCache &cache)
 
 void Writer::startObject()
 {
-	if(mState == S_VALUE) throw "bad state";
+	if(mState == S_VALUE) throw ApiException("bad state");
 	Token t(OBJECT);
 	writeToken(&t);
 }
 
 void Writer::endObject()
 {
-	if(mState == S_SEPARATOR) throw "bad state";
-	if(mStack.empty() || mStack.back() != '{') throw "Mismatching api calls";
+	if(mState == S_SEPARATOR) throw ApiException("bad state");
+	if(mStack.empty() || mStack.back() != '{') throw ApiException("Mismatching api calls.");
 	Token t(END_OBJECT);
 	writeToken(&t);
 }
 
 void Writer::writeObjectKey(std::string key)
 {
-	if(mStack.empty() || mStack.back() != '{') throw "Allowed only in inside a object";
+	if(mStack.empty() || mStack.back() != '{') throw ApiException("Allowed only in inside a object.");
 	if(mState == S_SEPARATOR) {
-		throw "bad state";
+		throw ApiException("bad state");
 	}
 	Token t(SEPARATOR);
 	writeToken(&t);
@@ -679,24 +706,24 @@ void Writer::writeObjectKey(std::string key)
 
 void Writer::startArray()
 {
-	if(mState == S_VALUE) throw "bad state";
+	if(mState == S_VALUE) throw ApiException("bad state");
 	Token t(ARRAY);
 	writeToken(&t);
 }
 
 void Writer::endArray()
 {
-	if(mState == S_SEPARATOR) throw "bad state";
-	if(mStack.empty() || mStack.back() != '[') throw "Mismatching api calls";
+	if(mState == S_SEPARATOR) throw ApiException("bad state");
+	if(mStack.empty() || mStack.back() != '[') throw ApiException("Mismatching api calls.");
 	Token t(END_ARRAY);
 	writeToken(&t);
 }
 
 void Writer::startNextElement()
 {
-	if(mStack.empty() || mStack.back() != '[') throw "Allowed only in inside a array";
+	if(mStack.empty() || mStack.back() != '[') throw ApiException("Allowed only in inside a array.");
 	if(mState == S_SEPARATOR) {
-		throw "bad state";
+		throw ApiException("bad state");
 	}
 	Token t(SEPARATOR);
 	writeToken(&t);

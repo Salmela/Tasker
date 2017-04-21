@@ -77,6 +77,7 @@ private:
 class Reader {
 public:
 	Reader(std::istream &stream);
+	Reader(TokenCache *cache);
 	~Reader();
 
 	void read(bool &value);

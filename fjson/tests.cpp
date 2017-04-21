@@ -231,6 +231,16 @@ static bool readObject()
 	res &= (val == 2);
 	res &= (json->readObjectKey(key) == false);
 
+	createReader("{,\"x\":1}");
+	json->startObject();
+	bool throwed = false;
+	try {
+		json->readObjectKey(key);
+	} catch(...) {
+		throwed = true;
+	}
+	res &= throwed;
+
 	return res;
 }
 
