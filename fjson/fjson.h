@@ -62,6 +62,18 @@ private:
 	void generateUtf8(std::ostream &builder, int value);
 };
 
+class TokenCache : public TokenStream {
+public:
+	TokenCache();
+	void record(Token &token);
+	void next(Token *token) override;
+	void dump();
+	std::vector<Token> getTokens();
+private:
+	std::vector<Token> mTokens;
+	unsigned int mIndex;
+};
+
 class Reader {
 public:
 	Reader(std::istream &stream);
@@ -73,7 +85,7 @@ public:
 	void read(float &value);
 	void read(double &value);
 	void read(std::string &value);
-	void skipValue();
+	void skipValue(TokenCache *foreignValues = NULL);
 
 	void startObject();
 	bool readObjectKey(std::string &key);
@@ -81,11 +93,12 @@ public:
 	void startArray();
 	bool hasNextElement();
 private:
-	std::istream &mStream;
 	Token mToken;
 	TokenStream *mTokenizer;
-	bool afterStartBracket;
+	TokenCache *mCache;
+	bool mAfterStartBracket;
 
+	std::string mCurrentKey;
 	std::vector<char> mStack;//list of '{' or '[' or 'A' or 'O' characters
 	void tokenize();
 };
@@ -102,6 +115,7 @@ public:
 	void write(float value);
 	void write(double value);
 	void write(std::string value);
+	void write(TokenCache &cache);
 
 	void startObject();
 	void endObject();

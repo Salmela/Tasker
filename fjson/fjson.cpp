@@ -290,13 +290,44 @@ void IstreamTokenStream::tokenize()
 	}
 }
 
+/// TokenCache
+
+TokenCache::TokenCache()
+{
+	mIndex = 0;
+}
+
+void TokenCache::record(Token &token)
+{
+	mTokens.push_back(token);
+}
+
+void TokenCache::next(Token *token)
+{
+	*token = mTokens[mIndex];
+	mIndex++;
+}
+
+std::vector<Token> TokenCache::getTokens()
+{
+	return mTokens;
+}
+
+void TokenCache::dump()
+{
+	for(Token t : mTokens) {
+		std::cout << "Token " << t.type << "\n";
+	}
+}
+
 /// Reader
 
 Reader::Reader(std::istream &stream)
-	:mStream(stream), mToken(NUL)
+	:mToken(NUL)
 {
-	afterStartBracket = false;
+	mAfterStartBracket = false;
 	mTokenizer = new IstreamTokenStream(stream);
+	mCache = NULL;
 	tokenize();
 }
 
@@ -307,6 +338,9 @@ Reader::~Reader()
 
 void Reader::tokenize()
 {
+	if(mCache) {
+		mCache->record(mToken);
+	}
 	mTokenizer->next(&mToken);
 }
 
@@ -376,25 +410,49 @@ void Reader::read(std::string &value)
 	tokenize();
 }
 
-void Reader::skipValue()
+void Reader::skipValue(TokenCache *foreignValues)
 {
 	std::string key;
+
+	if(foreignValues) {
+		mCache = foreignValues;
+		if(!mStack.empty() && mStack.back() == '{') {
+			Token t(SEPARATOR);
+			mCache->record(t);
+
+			Token t2(STRING);
+			t2.string = mCurrentKey;
+			mCache->record(t2);
+
+			Token t3(COLON);
+			mCache->record(t3);
+		}
+	}
+
 	switch(mToken.type) {
 		case STRING:
 		case BOOLEAN:
-		case NUL:
 		case INTEGER:
 		case REAL:
+		case NUL:
 			tokenize();
 			break;
 		case OBJECT:
 			startObject();
+			if(mCache && mToken.type != END_OBJECT) {
+				Token t(SEPARATOR);
+				mCache->record(t);
+			}
 			while(readObjectKey(key)) {
 				skipValue();
 			}
 			break;
 		case ARRAY:
 			startArray();
+			if(mCache && mToken.type != END_ARRAY) {
+				Token t(SEPARATOR);
+				mCache->record(t);
+			}
 			while(hasNextElement()) {
 				skipValue();
 			}
@@ -407,6 +465,10 @@ void Reader::skipValue()
 			throw "Invalid state";
 			break;
 	}
+
+	if(foreignValues) {
+		mCache = NULL;
+	}
 }
 
 void Reader::startObject()
@@ -416,7 +478,7 @@ void Reader::startObject()
 		return;
 	} else if(mToken.type == OBJECT) {
 		mStack.push_back('{');
-		afterStartBracket = true;
+		mAfterStartBracket = true;
 	} else {
 		std::cerr << "Expected object.\n";
 	}
@@ -433,16 +495,17 @@ bool Reader::readObjectKey(std::string &key)
 	}
 	bool res;
 	if(mToken.type == END_OBJECT) {
-		afterStartBracket = false;
+		mAfterStartBracket = false;
 		res = false;
 		mStack.pop_back();
-	} else if(afterStartBracket || mToken.type == SEPARATOR) {
+	} else if(mAfterStartBracket || mToken.type == SEPARATOR) {
 		res = true;
-		if(!afterStartBracket) {
+		if(!mAfterStartBracket) {
 			tokenize();
 		}
-		afterStartBracket = false;
+		mAfterStartBracket = false;
 		read(key);
+		mCurrentKey = key;
 		if(mToken.type != COLON) {
 			throw "Expected ':'";
 		}
@@ -460,7 +523,7 @@ void Reader::startArray()
 		return;
 	} else if(mToken.type == ARRAY) {
 		mStack.push_back('[');
-		afterStartBracket = true;
+		mAfterStartBracket = true;
 	} else {
 		std::cerr << "Expected array.\n";
 	}
@@ -483,13 +546,13 @@ bool Reader::hasNextElement()
 		res = false;
 	} else if(mToken.type == SEPARATOR) {
 		res = true;
-	} else if(afterStartBracket) {
-		afterStartBracket = false;
+	} else if(mAfterStartBracket) {
+		mAfterStartBracket = false;
 		return true;
 	} else {
 		throw "Expected ']' or ',' character.";
 	}
-	afterStartBracket = false;
+	mAfterStartBracket = false;
 	tokenize();
 	return res;
 }
@@ -573,6 +636,13 @@ void Writer::write(std::string value)
 	Token t(STRING);
 	t.string = value;
 	writeToken(&t);
+}
+
+void Writer::write(TokenCache &cache)
+{
+	for(Token token : cache.getTokens()) {
+		writeToken(&token);
+	}
 }
 
 void Writer::startObject()

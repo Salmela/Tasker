@@ -321,9 +321,9 @@ static void createWriter(bool doPretty = false);
 
 static void createWriter(bool doPretty)
 {
+	if(out) delete out;
 	ostream.str("");
 	ostream.clear();
-	if(out) delete out;
 	out = new Writer(ostream, doPretty);
 }
 
@@ -483,6 +483,73 @@ static bool badWriteMixed()
 	return res;
 }
 
+static bool replayForeignValues()
+{
+	std::string key;
+	bool res = true;
+
+	TokenCache cache;
+
+	createReader("{\"test\":[[1],[]], \"abc\": \"a\"}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->skipValue(&cache);
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "abc");
+	json->skipValue();
+	res &= (json->readObjectKey(key) == false);
+
+	createWriter(true);
+	out->startObject();
+	out->write(cache);
+	out->writeObjectKey("abc");
+	out->write(std::string("a"));
+	out->endObject();
+
+	res &= ostream.str() == "{\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t],\n\t\"abc\": \"a\"\n}";
+
+	TokenCache cache2;
+
+	createReader("{\"test\":[[1],[]], \"abc\": \"a\"}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->skipValue(&cache2);
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "abc");
+	json->skipValue(&cache2);
+	res &= (json->readObjectKey(key) == false);
+
+	createWriter(true);
+	out->startObject();
+	out->write(cache2);
+	out->endObject();
+
+	res &= ostream.str() == "{\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t],\n\t\"abc\": \"a\"\n}";
+//	cache2.dump();
+//	std::cout << ostream.str() << "\n{\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t],\n\t\"abc\": \"a\"\n}\n";
+
+	TokenCache cache3;
+	createReader("{\"test\": {\"xyz\": [1]}, \"abc\": true}");
+	json->startObject();
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "test");
+	json->skipValue(&cache3);
+	res &= (json->readObjectKey(key) == true);
+	res &= (key == "abc");
+	json->skipValue();
+	res &= (json->readObjectKey(key) == false);
+
+	createWriter(true);
+	out->startObject();
+	out->write(cache3);
+	out->endObject();
+	res &= ostream.str() == "{\n\t\"test\": {\n\t\t\"xyz\": [\n\t\t\t1\n\t\t]\n\t}\n}";
+
+	return res;
+}
+
 int main(int argc, char **argv)
 {
 	bool success;
@@ -522,6 +589,9 @@ int main(int argc, char **argv)
 	success = writeObject();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = badWriteMixed();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+
+	success = replayForeignValues();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	if(out) delete out;
