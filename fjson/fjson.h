@@ -67,8 +67,8 @@ public:
 	TokenCache();
 	void record(Token &token);
 	void next(Token *token) override;
-	void dump();
-	std::vector<Token> getTokens();
+	void dump() const;
+	std::vector<Token> getTokens() const;
 private:
 	std::vector<Token> mTokens;
 	unsigned int mIndex;
@@ -116,7 +116,7 @@ public:
 	void write(float value);
 	void write(double value);
 	void write(std::string value);
-	void write(TokenCache &cache);
+	void write(const TokenCache &cache);
 
 	void startObject();
 	void endObject();

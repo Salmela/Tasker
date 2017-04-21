@@ -277,7 +277,7 @@ TaskType *TaskType::read(Project *project, FJson::Reader &in)
 				type->mStates.push_back(state);
 			}
 		} else {
-			in.skipValue();
+			in.skipValue(&type->mForeignKeys);
 		}
 	}
 	type->mStartState = type->mStates[startState];
@@ -461,7 +461,7 @@ Task *Task::read(Project *project, FJson::Reader &in)
 		} else if(key == "closed") {
 			in.read(task->mClosed);
 		} else {
-			in.skipValue();
+			in.skipValue(&task->mForeignKeys);
 		}
 	}
 	task->mState = task->mType->getStateById(state);
@@ -489,6 +489,8 @@ void Task::write(FJson::Writer &out) const
 	out.write(mType->getStateId(mState));
 	out.writeObjectKey("closed");
 	out.write(mClosed);
+
+	out.write(mForeignKeys);
 	out.endObject();
 }
 
@@ -962,6 +964,7 @@ void Project::write()
 
 	out.writeObjectKey("task-path");
 	out.write(mTaskFile);
+	out.write(mForeignKeys);
 	out.endObject();
 
 	writeTasks();
@@ -1011,7 +1014,7 @@ bool Project::read()
 		} else if(key == "task-path") {
 			in.read(mTaskFile);
 		} else {
-			in.skipValue();
+			in.skipValue(&mForeignKeys);
 		}
 	}
 
@@ -1079,6 +1082,7 @@ void Config::setTaskerData(std::string path, std::string source)
 		out.endObject();
 	}
 	out.endArray();
+	out.write(Config::mConfig.mForeignKeys);
 	out.endObject();
 }
 
@@ -1093,7 +1097,7 @@ void Config::readHomeConfig() {
 		if(key == "repositories") {
 			readRepository(in);
 		} else {
-			std::cout << "unknown\n";
+			in.skipValue(&Config::mConfig.mForeignKeys);
 		}
 	}
 }

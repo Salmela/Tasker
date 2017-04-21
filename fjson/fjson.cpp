@@ -326,12 +326,12 @@ void TokenCache::next(Token *token)
 	mIndex++;
 }
 
-std::vector<Token> TokenCache::getTokens()
+std::vector<Token> TokenCache::getTokens() const
 {
 	return mTokens;
 }
 
-void TokenCache::dump()
+void TokenCache::dump() const
 {
 	for(Token t : mTokens) {
 		std::cout << "Token " << t.type << "\n";
@@ -665,7 +665,7 @@ void Writer::write(std::string value)
 	writeToken(&t);
 }
 
-void Writer::write(TokenCache &cache)
+void Writer::write(const TokenCache &cache)
 {
 	for(Token token : cache.getTokens()) {
 		writeToken(&token);

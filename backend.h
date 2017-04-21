@@ -65,6 +65,7 @@ private:
 	std::set<TaskState*> mEndStates;
 	std::map<TaskState*, std::set<TaskState*> > mStateMap;
 	std::vector<TaskState*> mStates;
+	FJson::TokenCache mForeignKeys;
 };
 
 class Task
@@ -96,6 +97,7 @@ private:
 	TaskType *mType;
 	TaskState *mState;
 	bool mClosed;
+	FJson::TokenCache mForeignKeys;
 
 	std::vector<Task*> mSubTasks;
 };
@@ -164,6 +166,7 @@ public:
 	unsigned int getSize() const;
 private:
 	std::vector<Task*> mTasks;
+	FJson::TokenCache mForeignKeys;
 };
 
 class Project
@@ -183,6 +186,7 @@ private:
 	std::string mTaskFile;
 	std::map<std::string, TaskType*> mTypes;
 	TaskList mList;
+	FJson::TokenCache mForeignKeys;
 
 	bool read();
 	void writeTasks();
@@ -204,13 +208,13 @@ private:
 		std::string data;
 		std::string source;
 	};
+	FJson::TokenCache mForeignKeys;
+	std::vector<Repository*> mRepositories;
 
 	void readHomeConfig();
 	void readRepository(FJson::Reader &in);
 
 	void addRepository(std::string source, std::string data);
-
-	std::vector<Repository*> mRepositories;
 };
 
 };
