@@ -504,7 +504,7 @@ static bool replayForeignValues()
 	json->startObject();
 	res &= (json->readObjectKey(key) == true);
 	res &= (key == "test");
-	json->skipValue(&cache);
+	json->skipValue(&cache, true);
 	res &= (json->readObjectKey(key) == true);
 	res &= (key == "abc");
 	json->skipValue();
@@ -525,10 +525,10 @@ static bool replayForeignValues()
 	json->startObject();
 	res &= (json->readObjectKey(key) == true);
 	res &= (key == "test");
-	json->skipValue(&cache2);
+	json->skipValue(&cache2, true);
 	res &= (json->readObjectKey(key) == true);
 	res &= (key == "abc");
-	json->skipValue(&cache2);
+	json->skipValue(&cache2, true);
 	res &= (json->readObjectKey(key) == false);
 
 	createWriter(true);
@@ -545,7 +545,7 @@ static bool replayForeignValues()
 	json->startObject();
 	res &= (json->readObjectKey(key) == true);
 	res &= (key == "test");
-	json->skipValue(&cache3);
+	json->skipValue(&cache3, true);
 	res &= (json->readObjectKey(key) == true);
 	res &= (key == "abc");
 	json->skipValue();
@@ -581,6 +581,17 @@ static bool readFromCache()
 	res &= (key == "abc");
 	json->skipValue();
 	res &= (json->readObjectKey(key) == false);
+
+	createReader("{\"test\":1, \"abc\": \"a\"}");
+	AssocArray obj(json);
+	res &= obj.has("test");
+	res &= obj.has("abc");
+	res &= !obj.has("xyz");
+
+	int value;
+	json = new Reader(obj.get("test"));
+	json->read(value);
+	res &= (value == 1);
 
 	return res;
 }
@@ -633,6 +644,5 @@ int main(int argc, char **argv)
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	if(out) delete out;
-
-	delete json;
+	if(json) delete json;
 }

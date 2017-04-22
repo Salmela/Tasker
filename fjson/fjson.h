@@ -89,7 +89,7 @@ public:
 	void read(float &value);
 	void read(double &value);
 	void read(std::string &value);
-	void skipValue(TokenCache *foreignValues = NULL);
+	void skipValue(TokenCache *cache = NULL, bool isForeignKey = false);
 
 	void startObject();
 	bool readObjectKey(std::string &key);
@@ -105,6 +105,21 @@ private:
 	std::string mCurrentKey;
 	std::vector<char> mStack;//list of '{' or '[' or 'A' or 'O' characters
 	void tokenize();
+
+	friend class AssocArray;
+};
+
+class AssocArray {
+public:
+	AssocArray(Reader *reader);
+	bool has(std::string key) const;
+	TokenCache *get(std::string key);
+private:
+	void read();
+
+	Reader *mReader;
+	std::vector<std::string> mKeys;
+	std::vector<TokenCache*> mValues;
 };
 
 class Writer {

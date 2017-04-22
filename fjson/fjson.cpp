@@ -17,6 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+#include <algorithm>
 #include <sstream>
 #include <string.h>
 #include "fjson.h"
@@ -445,12 +446,15 @@ void Reader::read(std::string &value)
 	tokenize();
 }
 
-void Reader::skipValue(TokenCache *foreignValues)
+void Reader::skipValue(TokenCache *cache, bool isForeignKey)
 {
 	std::string key;
 
-	if(foreignValues) {
-		mCache = foreignValues;
+	if(cache) {
+		mCache = cache;
+	}
+
+	if(cache && isForeignKey) {
 		if(!mStack.empty() && mStack.back() == '{') {
 			Token t(SEPARATOR);
 			t.value.visible = !mAfterStartBracket;
@@ -504,7 +508,7 @@ void Reader::skipValue(TokenCache *foreignValues)
 			break;
 	}
 
-	if(foreignValues) {
+	if(cache) {
 		mCache = NULL;
 	}
 }
@@ -593,6 +597,38 @@ bool Reader::hasNextElement()
 	mAfterStartBracket = false;
 	tokenize();
 	return res;
+}
+
+AssocArray::AssocArray(Reader *reader)
+{
+	mReader = reader;
+	read();
+}
+
+void AssocArray::read()
+{
+	if(mReader->mToken.type != OBJECT) {
+		throw ApiException("AssocArray is supported only for objects");
+	}
+	mReader->startObject();
+	std::string key;
+	while(mReader->readObjectKey(key)) {
+		TokenCache *cache = new TokenCache;
+		mReader->skipValue(cache);
+		mKeys.push_back(key);
+		mValues.push_back(cache);
+	}
+}
+
+bool AssocArray::has(std::string key) const
+{
+	return std::find(mKeys.begin(), mKeys.end(), key) != mKeys.end();
+}
+
+TokenCache *AssocArray::get(std::string key)
+{
+	auto index = std::find(mKeys.begin(), mKeys.end(), key) - mKeys.begin();
+	return mValues[index];
 }
 
 /// Writer
