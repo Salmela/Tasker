@@ -252,8 +252,21 @@ bool searchTasks() {
 	return res;
 }
 
+bool
+openProjectPerf()
+{
+	auto *project = Backend::Project::open("/home/me/sources/tasker");
+	bool res = project && project->getTaskList();
+	if(!res) return false;
+	return res;
+}
+
 int testMain()
 {
+//#define PERF
+#ifdef PERF
+	return !openProjectPerf();
+#else
 	bool success;
 
 	success = createProject();
@@ -278,6 +291,7 @@ int testMain()
 	success = searchTasks();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	return 0;
+#endif
 }
 
 };
