@@ -366,20 +366,20 @@ TaskState *TaskType::getStateById(unsigned int index) const
 
 Date::Date(std::string date)
 {
-	struct tm *tmp = new struct tm;
-	mTime = tmp;
+	mTime = new struct tm;
 	strptime(date.c_str(), "%Y-%m-%dT%H:%M:%SZ", mTime);
 }
 
 Date::Date()
 {
 	time_t t = time(NULL);
-	mTime = gmtime(&t);
+	mTime = new struct tm;
+	*mTime = *gmtime(&t);
 }
 
 Date::~Date()
 {
-	free(mTime);
+	delete mTime;
 }
 
 std::string Date::getMachineTime() const
