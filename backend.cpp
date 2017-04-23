@@ -367,6 +367,7 @@ TaskState *TaskType::getStateById(unsigned int index) const
 Date::Date(std::string date)
 {
 	mTime = new struct tm;
+	*mTime = {0};
 	strptime(date.c_str(), "%Y-%m-%dT%H:%M:%SZ", mTime);
 }
 
@@ -395,6 +396,12 @@ std::string Date::getFormattedTime(std::string format) const
 	time_t val = mktime(mTime);
 	strftime(buffer, 80, format.c_str(), localtime(&val));
 	return buffer;
+}
+
+Date &Date::operator=(const Date &other)
+{
+	*mTime = *other.mTime;
+	return *this;
 }
 
 /// Task

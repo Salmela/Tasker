@@ -77,8 +77,9 @@ public:
 
 	std::string getMachineTime() const;
 	std::string getFormattedTime(std::string format) const;
+	Date &operator=(const Date &other);
 private:
-	struct tm *mTime;
+	struct tm *mTime;//TODO smart pointer?
 };
 
 class Task
