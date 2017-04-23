@@ -46,6 +46,8 @@ std::vector<std::string> split(const std::string &str, char delim) {
 	return elements;
 }
 
+User *User::anonymous = new User("anonymous");
+
 /// TaskState
 TaskState::TaskState(std::string name)
 	:mName(name)
@@ -406,9 +408,15 @@ Date &Date::operator=(const Date &other)
 
 /// TaskEvent
 
+
+TaskEvent::TaskEvent()
+	:mUser(User::anonymous)
+{
+}
+
 TaskEvent::~TaskEvent() {}
 
-TaskEvent *TaskEvent::read(FJson::Reader &in)
+TaskEvent *TaskEvent::read(Project *project, FJson::Reader &in)
 {
 	std::string typeStr;
 
@@ -436,7 +444,9 @@ TaskEvent *TaskEvent::read(FJson::Reader &in)
 		if(key == "type") {
 			continue;
 		} else if(key == "user") {
-			value.read(event->mUser);
+			std::string name;
+			value.read(name);
+			event->mUser = project->getUser(name);
 		} else if(key == "date") {
 			std::string time;
 			value.read(time);
@@ -457,13 +467,31 @@ void TaskEvent::write(FJson::Writer &out) const
 	out.writeObjectKey("date");
 	out.write(mDate.getMachineTime());
 
+	if(mUser != User::anonymous) {
+		out.writeObjectKey("user");
+		out.write(mUser->getName());
+	}
+
 	writeEvent(out);
 	out.endObject();
 }
 
-Date TaskEvent::getCreationTime() const
+const Date *TaskEvent::getCreationTime() const
 {
-	return mDate;
+	return &mDate;
+}
+
+void TaskEvent::setUser(User *user)
+{
+	if(mUser != User::anonymous) {
+		throw "User can't be set twice.";
+	}
+	mUser = user;
+}
+
+User *TaskEvent::getUser() const
+{
+	return mUser;
 }
 
 bool StateChangeEvent::readInternal(FJson::Reader &in, std::string key)
@@ -588,6 +616,7 @@ const std::vector<Task*> Task::getSubTasks() const
 
 void Task::addEvent(TaskEvent *event)
 {
+	event->setUser(mProject->getMyUser());
 	mEvents.push_back(event);
 }
 
@@ -625,7 +654,7 @@ Task *Task::read(Project *project, FJson::Reader &in)
 		} else if(key == "events") {
 			in.startArray();
 			while(in.hasNextElement()) {
-				auto *event = TaskEvent::read(in);
+				auto *event = TaskEvent::read(project, in);
 				task->mEvents.push_back(event);
 			}
 		} else {
@@ -1088,6 +1117,7 @@ Project *Project::open(std::string dirname)
 }
 
 Project::Project()
+	:mMyUser(NULL)
 {
 }
 
@@ -1102,6 +1132,26 @@ TaskType *Project::getType(std::string name)
 {
 	auto iter = mTypes.find(name);
 	return (iter != mTypes.end()) ? iter->second : NULL;
+}
+
+User *Project::getMyUser()
+{
+	if(!mMyUser) {
+		return User::anonymous;
+	}
+	return mMyUser;
+}
+
+User *Project::getUser(std::string name)
+{
+	auto iter = mUsers.find(name);
+	if(iter != mUsers.end()) {
+		return iter->second;
+	} else {
+		User *user = new User(name);
+		mUsers[name] = user;
+		return user;
+	}
 }
 
 TaskList *Project::getTaskList()

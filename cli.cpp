@@ -371,7 +371,8 @@ void TaskView::render(CliInterface *parent)
 	for(auto *event : mTask->getEvents()) {
 		auto *comment = dynamic_cast<Backend::CommentEvent*>(event);
 		if(comment) {
-			std::cout << comment->getCreationTime().getFormattedTime("%d.%m.%Y") << " by X\n";
+			std::cout << comment->getCreationTime()->getFormattedTime("%d.%m.%Y")
+			          << " by " << comment->getUser()->getName() << "\n";
 			std::cout << comment->getContent();
 		} else {
 			std::cout << "Unknown event\n";

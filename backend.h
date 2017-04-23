@@ -13,6 +13,20 @@ namespace Backend {
 class Task;
 class Project;
 
+class User
+{
+public:
+	static User *anonymous;
+
+	User(std::string name) :mName(name) {};
+	std::string getName() {return mName;};
+	std::string getEmail() {return mEmail;};
+private:
+	std::string mName;
+	std::string mEmail;
+	std::vector<std::string> mNickNames;
+};
+
 /* The task state should be feature of TaskType */
 class TaskState
 {
@@ -89,18 +103,20 @@ typedef TaskEvent *(*TaskConstructor)();
 class TaskEvent
 {
 public:
+	TaskEvent();
 	virtual ~TaskEvent();
-	static TaskEvent *read(FJson::Reader &in);
+	static TaskEvent *read(Project *project, FJson::Reader &in);
 	void write(FJson::Writer &out) const;
-	Date getCreationTime() const;
+	const Date *getCreationTime() const;
+	void setUser(User *user);
+	User *getUser() const;
 
 	virtual std::string getName() const {return "unknown";};
 private:
 	virtual bool readInternal(FJson::Reader &in, std::string key) {return false;};
 	virtual void writeEvent(FJson::Writer &out) const {};
 
-	std::string mTypeStr;
-	std::string mUser;
+	User *mUser;
 	Date mDate;
 	FJson::TokenCache mForeignKeys;
 };
@@ -119,7 +135,7 @@ class CommentEvent : public TaskEvent
 public:
 	CommentEvent() {};
 	CommentEvent(std::string content);
-	const std::string getContent() {return mContent;};
+	const std::string getContent() const {return mContent;};
 private:
 	std::string getName() const override { return "COMMENT"; }
 	bool readInternal(FJson::Reader &in, std::string key) override;
@@ -258,6 +274,8 @@ public:
 
 	Project(); //< open for tests
 	~Project();
+	User *getMyUser();
+	User *getUser(std::string name);
 	TaskType *getType(std::string name);
 	TaskList *getTaskList();
 
@@ -266,9 +284,11 @@ public:
 
 	void write();//< TODO make private
 private:
+	User *mMyUser;
 	std::string mDirname;
 	std::string mTaskFile;
 	std::map<std::string, TaskType*> mTypes;
+	std::map<std::string, User*> mUsers;
 	TaskList mList;
 	FJson::TokenCache mForeignKeys;
 
