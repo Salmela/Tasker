@@ -479,14 +479,7 @@ Task *Task::read(Project *project, FJson::Reader &in)
 		if(key == "name") {
 			in.read(task->mName);
 		} else if(key == "desc") {
-			in.startArray();
-			std::ostringstream desc;
-			while(in.hasNextElement()) {
-				std::string str;
-				in.read(str);
-				desc << str;
-			}
-			task->mDesc = desc.str();
+			task->mDesc = Project::readText(in);
 		} else if(key == "type") {
 			std::string type;
 			in.read(type);
@@ -510,13 +503,7 @@ void Task::write(FJson::Writer &out) const
 	out.write(mName);
 	out.writeObjectKey("desc");
 
-	out.startArray();
-	std::vector<std::string> lines = split(mDesc, '\n');
-	for(auto line : lines) {
-		out.startNextElement();
-		out.write(line + "\\n");
-	}
-	out.endArray();
+	Project::writeText(out, mDesc);
 
 	out.writeObjectKey("type");
 	out.write(mType->getName());
@@ -1065,6 +1052,29 @@ bool Project::read()
 		}
 	}
 	return true;
+}
+
+std::string Project::readText(FJson::Reader &in)
+{
+	in.startArray();
+	std::ostringstream text;
+	while(in.hasNextElement()) {
+		std::string str;
+		in.read(str);
+		text << str;
+	}
+	return text.str();
+}
+
+void Project::writeText(FJson::Writer &out, std::string text)
+{
+	out.startArray();
+	std::vector<std::string> lines = split(text, '\n');
+	for(auto line : lines) {
+		out.startNextElement();
+		out.write(line + "\\n");
+	}
+	out.endArray();
 }
 
 /// Config

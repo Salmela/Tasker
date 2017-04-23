@@ -193,6 +193,9 @@ public:
 	TaskType *getType(std::string name);
 	TaskList *getTaskList();
 
+	static std::string readText(FJson::Reader &in);
+	static void writeText(FJson::Writer &out, std::string text);
+
 	void write();//< TODO make private
 private:
 	std::string mDirname;
