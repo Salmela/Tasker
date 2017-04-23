@@ -21,7 +21,8 @@
 #include <exception>
 #include <fstream>
 #include <sstream>
-#include <string.h>
+#include <cstring>
+#include <ctime>
 
 #include "backend.h"
 
@@ -359,6 +360,40 @@ TaskState *TaskType::getStateById(unsigned int index) const
 		return NULL;
 	}
 	return mStates[index];
+}
+
+/// Date
+
+Date::Date(std::string date)
+{
+	struct tm *tmp = new struct tm;
+	mTime = tmp;
+	strptime(date.c_str(), "%Y-%m-%dT%H:%M:%SZ", mTime);
+}
+
+Date::Date()
+{
+	time_t t = time(NULL);
+	mTime = gmtime(&t);
+}
+
+Date::~Date()
+{
+	free(mTime);
+}
+
+std::string Date::getMachineTime() const
+{
+	char buffer[24];
+	strftime(buffer, 24, "%G-%m-%dT%H:%M:%SZ", mTime);
+	return buffer;
+}
+
+std::string Date::getFormattedTime(std::string format) const
+{
+	char buffer[80];
+	strftime(buffer, 80, format.c_str(), mTime);
+	return buffer;
 }
 
 /// Task

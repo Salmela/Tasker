@@ -68,6 +68,19 @@ private:
 	FJson::TokenCache mForeignKeys;
 };
 
+class Date
+{
+public:
+	Date(std::string date);
+	Date();
+	~Date();
+
+	std::string getMachineTime() const;
+	std::string getFormattedTime(std::string format) const;
+private:
+	struct tm *mTime;
+};
+
 class Task
 {
 public:

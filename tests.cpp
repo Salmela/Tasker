@@ -23,6 +23,17 @@
 
 namespace Tasker {
 
+bool dateTest() {
+	bool res = true;
+
+	Backend::Date d("2017-04-23T14:51:00Z");
+	res &= d.getMachineTime() == "2017-04-23T14:51:00Z";
+
+	res &= d.getFormattedTime("Year %Y") == "Year 2017";
+
+	return res;
+}
+
 bool createProject() {
 	auto *project = Backend::Project::create("./");
 	bool res = project->getTaskList();
@@ -268,6 +279,9 @@ int testMain()
 	return !openProjectPerf();
 #else
 	bool success;
+
+	success = dateTest();
+	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	success = createProject();
 	std::cout << (success ? "Success" : "Failure") << "\n";
