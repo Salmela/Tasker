@@ -353,6 +353,7 @@ Reader::Reader(std::istream &stream)
 	:mToken(NUL)
 {
 	mAfterStartBracket = false;
+	mHasInternalTokenizer = true;
 	mTokenizer = new IstreamTokenStream(stream);
 	mCache = NULL;
 	tokenize();
@@ -362,6 +363,7 @@ Reader::Reader(TokenCache *cache)
 	:mToken(NUL)
 {
 	mAfterStartBracket = false;
+	mHasInternalTokenizer = false;
 	mTokenizer = cache;
 	mCache = NULL;
 	tokenize();
@@ -369,7 +371,9 @@ Reader::Reader(TokenCache *cache)
 
 Reader::~Reader()
 {
-	delete mTokenizer;
+	if(mHasInternalTokenizer) {
+		delete mTokenizer;
+	}
 }
 
 void Reader::tokenize()
@@ -615,20 +619,23 @@ void AssocArray::read()
 	while(mReader->readObjectKey(key)) {
 		TokenCache *cache = new TokenCache;
 		mReader->skipValue(cache);
-		mKeys.push_back(key);
-		mValues.push_back(cache);
+		mValues[key] = cache;
 	}
 }
 
 bool AssocArray::has(std::string key) const
 {
-	return std::find(mKeys.begin(), mKeys.end(), key) != mKeys.end();
+	return mValues.find(key) != mValues.end();
 }
 
 TokenCache *AssocArray::get(std::string key)
 {
-	auto index = std::find(mKeys.begin(), mKeys.end(), key) - mKeys.begin();
-	return mValues[index];
+	return mValues[key];
+}
+
+const std::map<std::string, TokenCache*> AssocArray::getValues()
+{
+	return mValues;
 }
 
 /// Writer

@@ -101,6 +101,7 @@ private:
 	TokenStream *mTokenizer;
 	TokenCache *mCache;
 	bool mAfterStartBracket;
+	bool mHasInternalTokenizer;
 
 	std::string mCurrentKey;
 	std::vector<char> mStack;//list of '{' or '[' or 'A' or 'O' characters
@@ -114,12 +115,12 @@ public:
 	AssocArray(Reader *reader);
 	bool has(std::string key) const;
 	TokenCache *get(std::string key);
+	const std::map<std::string, TokenCache*> getValues();
 private:
 	void read();
 
 	Reader *mReader;
-	std::vector<std::string> mKeys;
-	std::vector<TokenCache*> mValues;
+	std::map<std::string, TokenCache*> mValues;
 };
 
 class Writer {
