@@ -256,8 +256,12 @@ void TaskListView::render(CliInterface *parent)
 			oss << separator << str;
 			separator = " ";
 		}
-		auto *search = Backend::Search::create(oss.str());
-		setFilter(search);
+		try {
+			auto *search = Backend::Search::create(oss.str());
+			setFilter(search);
+		} catch(...) {
+			std::cout << "Syntax error in search string\n";
+		}
 	} else if (command == "t" || command == "type") {
 		if (args.size() != 1) {
 			std::cout << "USAGE: type NAME\n";

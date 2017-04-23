@@ -374,7 +374,7 @@ Date::Date()
 {
 	time_t t = time(NULL);
 	mTime = new struct tm;
-	*mTime = *gmtime(&t);
+	gmtime_r(&t, mTime);
 }
 
 Date::~Date()
@@ -392,7 +392,8 @@ std::string Date::getMachineTime() const
 std::string Date::getFormattedTime(std::string format) const
 {
 	char buffer[80];
-	strftime(buffer, 80, format.c_str(), mTime);
+	time_t val = mktime(mTime);
+	strftime(buffer, 80, format.c_str(), localtime(&val));
 	return buffer;
 }
 
