@@ -82,6 +82,69 @@ private:
 	struct tm *mTime;//TODO smart pointer?
 };
 
+class TaskEvent;
+
+typedef TaskEvent *(*TaskConstructor)();
+
+class TaskEvent
+{
+public:
+	virtual ~TaskEvent();
+	static TaskEvent *read(FJson::Reader &in);
+	void write(FJson::Writer &out) const;
+	Date getCreationTime() const;
+
+	virtual std::string getName() const {return "unknown";};
+private:
+	virtual bool readInternal(FJson::Reader &in, std::string key) {return false;};
+	virtual void writeEvent(FJson::Writer &out) const {};
+
+	std::string mTypeStr;
+	std::string mUser;
+	Date mDate;
+	FJson::TokenCache mForeignKeys;
+};
+
+class StateChangeEvent : public TaskEvent
+{
+private:
+	std::string getName() const override { return "STATE_CHANGE"; }
+	bool readInternal(FJson::Reader &in, std::string key) override;
+	void writeEvent(FJson::Writer &out) const override;
+	unsigned int mFromState, mToState;
+};
+
+class CommentEvent : public TaskEvent
+{
+public:
+	CommentEvent() {};
+	CommentEvent(std::string content);
+	const std::string getContent() {return mContent;};
+private:
+	std::string getName() const override { return "COMMENT"; }
+	bool readInternal(FJson::Reader &in, std::string key) override;
+	void writeEvent(FJson::Writer &out) const override;
+
+	std::string mContent;
+};
+
+class ReferenceEvent : public TaskEvent
+{
+private:
+	std::string getName() const override { return "TASK_REF"; }
+	bool readInternal(FJson::Reader &in, std::string key) override {return false;};
+	void writeEvent(FJson::Writer &out) const override {};
+};
+
+class CommitEvent : public TaskEvent
+{
+private:
+	std::string getName() const override { return "COMMIT_REF"; }
+	bool readInternal(FJson::Reader &in, std::string key) override;
+	void writeEvent(FJson::Writer &out) const override;
+	std::string mCommit;
+};
+
 class Task
 {
 public:
@@ -100,6 +163,9 @@ public:
 	void addSubTask(Task *task);
 	const std::vector<Task*> getSubTasks() const;
 
+	void addEvent(TaskEvent *event);
+	const std::vector<TaskEvent*> getEvents() const;
+
 	bool isClosed() const;
 	static Task *read(Project *project, FJson::Reader &in);
 	void write(FJson::Writer &out) const;
@@ -113,6 +179,7 @@ private:
 	bool mClosed;
 	FJson::TokenCache mForeignKeys;
 
+	std::vector<TaskEvent*> mEvents;
 	std::vector<Task*> mSubTasks;
 };
 

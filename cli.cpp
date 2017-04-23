@@ -354,7 +354,7 @@ void TaskView::render(CliInterface *parent)
 		std::cout << "=";
 	}
 	std::cout << "\n[" << mTask->getState()->getName() << "]\n";
-	std::cout << "\n" << mTask->getDescription() << "\n";
+	std::cout << "\n" << mTask->getDescription();
 
 	auto subTasks = mTask->getSubTasks();
 
@@ -362,11 +362,23 @@ void TaskView::render(CliInterface *parent)
 		std::cout << "Sub-tasks:\n";
 
 		unsigned int index = 1;
-		for(auto task : subTasks) {
+		for(auto *task : subTasks) {
 			std::cout << " " << index++ << ". ";
 			std::cout << task->getName() << "\n";
 		}
 	}
+
+	for(auto *event : mTask->getEvents()) {
+		auto *comment = dynamic_cast<Backend::CommentEvent*>(event);
+		if(comment) {
+			std::cout << comment->getCreationTime().getFormattedTime("%d.%m.%Y") << " by X\n";
+			std::cout << comment->getContent();
+		} else {
+			std::cout << "Unknown event\n";
+		}
+	}
+
+	std::cout << "\n";
 
 	std::string command;
 	std::vector<std::string> args;
@@ -381,7 +393,8 @@ void TaskView::render(CliInterface *parent)
 		parent->newView(new CreateTaskView(mTask));
 	} else if(command == "c" || command == "comment") {
 		//Comment
-		std::cout << "Commenting not implemented yet";
+		auto *comment = new Backend::CommentEvent(trim(openEditor("")));
+		mTask->addEvent(comment);
 	} else if(command == "s" || command == "state") {
 		//Change the state
 		if(args.size() != 1) {

@@ -272,6 +272,34 @@ openProjectPerf()
 	return res;
 }
 
+bool taskEvents()
+{
+	Backend::TaskList list;
+	bool res = true;
+
+	Backend::TaskType type(NULL, "type");
+
+	auto *state = Backend::TaskState::create("start");
+	type.setStartState(state);
+	type.setEndStates({state});
+
+	auto *task = new Backend::Task(NULL, "test");
+	task->setType(&type);
+	list.addTask(task);
+
+	auto *event = new Backend::CommentEvent("Hello");
+	task->addEvent(event);
+
+	const std::vector<Backend::TaskEvent*> events = task->getEvents();
+	res &= events.size() == 1;
+	auto *e = dynamic_cast<Backend::CommentEvent*>(events[0]);
+	res &= e->getContent() == "Hello";
+
+	delete event;
+
+	return res;
+}
+
 int testMain()
 {
 //#define PERF
@@ -303,6 +331,9 @@ int testMain()
 	success = filterTasks();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	success = searchTasks();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+
+	success = taskEvents();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 	return 0;
 #endif

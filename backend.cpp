@@ -404,6 +404,122 @@ Date &Date::operator=(const Date &other)
 	return *this;
 }
 
+/// TaskEvent
+
+TaskEvent::~TaskEvent() {}
+
+TaskEvent *TaskEvent::read(FJson::Reader &in)
+{
+	std::string typeStr;
+
+	FJson::AssocArray obj(&in);
+	FJson::Reader type(obj.get("type"));
+	type.read(typeStr);
+
+	TaskEvent *event;
+	//TODO use factory
+	if(typeStr == "STATE_CHANGE") {
+		event = new StateChangeEvent();
+	} else if(typeStr == "COMMENT") {
+		event = new CommentEvent();
+	} else if(typeStr == "TASK_REF") {
+		event = new ReferenceEvent();
+	} else if(typeStr == "COMMIT_REF") {
+		event = new CommitEvent();
+	} else {
+		throw "Unknown event type";
+	}
+
+	for(auto pair : obj.getValues()) {
+		auto key = pair.first;
+		FJson::Reader value(pair.second);
+		if(key == "type") {
+			continue;
+		} else if(key == "user") {
+			value.read(event->mUser);
+		} else if(key == "date") {
+			std::string time;
+			value.read(time);
+			event->mDate = Date(time);
+		} else if(!event->readInternal(value, key)) {
+			value.skipValue(&event->mForeignKeys);
+		}
+	}
+	return event;
+}
+
+void TaskEvent::write(FJson::Writer &out) const
+{
+	out.startObject();
+	out.writeObjectKey("type");
+	out.write(getName());
+
+	out.writeObjectKey("date");
+	out.write(mDate.getMachineTime());
+
+	writeEvent(out);
+	out.endObject();
+}
+
+Date TaskEvent::getCreationTime() const
+{
+	return mDate;
+}
+
+bool StateChangeEvent::readInternal(FJson::Reader &in, std::string key)
+{
+	if(key == "from") {
+		in.read(mFromState);
+		return true;
+	} else if(key == "to") {
+		in.read(mToState);
+		return true;
+	}
+	return false;
+}
+
+void StateChangeEvent::writeEvent(FJson::Writer &out) const
+{
+	out.writeObjectKey("from");
+	out.write(mFromState);
+	out.writeObjectKey("to");
+	out.write(mToState);
+}
+
+CommentEvent::CommentEvent(std::string content)
+	:mContent(content)
+{
+}
+
+bool CommentEvent::readInternal(FJson::Reader &in, std::string key)
+{
+	if(key == "content") {
+		mContent = Project::readText(in);
+		return true;
+	}
+	return false;
+}
+
+void CommentEvent::writeEvent(FJson::Writer &out) const
+{
+	out.writeObjectKey("content");
+	Project::writeText(out, mContent);
+}
+
+bool CommitEvent::readInternal(FJson::Reader &in, std::string key)
+{
+	if(key == "commit") {
+		in.read(mCommit);
+		return true;
+	}
+	return false;
+}
+void CommitEvent::writeEvent(FJson::Writer &out) const
+{
+	out.writeObjectKey("commit");
+	out.write(mCommit);
+}
+
 /// Task
 
 Task::Task(Project *project, std::string name)
@@ -470,6 +586,16 @@ const std::vector<Task*> Task::getSubTasks() const
 	return mSubTasks;
 }
 
+void Task::addEvent(TaskEvent *event)
+{
+	mEvents.push_back(event);
+}
+
+const std::vector<TaskEvent*> Task::getEvents() const
+{
+	return mEvents;
+}
+
 bool Task::isClosed() const
 {
 	return mType->isClosed(mState);
@@ -496,6 +622,12 @@ Task *Task::read(Project *project, FJson::Reader &in)
 			in.read(state);
 		} else if(key == "closed") {
 			in.read(task->mClosed);
+		} else if(key == "events") {
+			in.startArray();
+			while(in.hasNextElement()) {
+				auto *event = TaskEvent::read(in);
+				task->mEvents.push_back(event);
+			}
 		} else {
 			in.skipValue(&task->mForeignKeys);
 		}
@@ -519,7 +651,13 @@ void Task::write(FJson::Writer &out) const
 	out.write(mType->getStateId(mState));
 	out.writeObjectKey("closed");
 	out.write(mClosed);
-
+	out.writeObjectKey("events");
+	out.startArray();
+	for(auto event : mEvents) {
+		out.startNextElement();
+		event->write(out);
+	}
+	out.endArray();
 	out.write(mForeignKeys);
 	out.endObject();
 }
