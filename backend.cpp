@@ -50,16 +50,25 @@ User User::ANONYMOUS_VALUE("anonymous");
 User *User::ANONYMOUS = &User::ANONYMOUS_VALUE;
 
 /// TaskState
-TaskState::TaskState(std::string name)
+TaskState::TaskState(TaskType *type, std::string name)
 	:mName(name)
 {
+	mType = type;
+	mId = type ? type->useNextStateId() : 0;
 	mIsDeleted = false;
 	mRefCount = 0;
 }
 
-TaskState *TaskState::create(std::string name)
+TaskState *TaskState::create(TaskType *type, std::string name)
 {
-	return new TaskState(name);
+	return new TaskState(type, name);
+}
+
+void TaskState::ownedBy(const TaskType *type)
+{
+	if(type != mType) {
+		throw "bad task type";
+	}
 }
 
 void TaskState::rename(std::string newName)
@@ -70,6 +79,11 @@ void TaskState::rename(std::string newName)
 std::string TaskState::getName() const
 {
 	return mName;
+}
+
+unsigned int TaskState::getId() const
+{
+	return mId;
 }
 
 void TaskState::ref()
@@ -101,11 +115,11 @@ void TaskState::free()
 	mIsDeleted = true;
 }
 
-TaskState *TaskState::read(FJson::Reader &in)
+TaskState *TaskState::read(TaskType *type, FJson::Reader &in)
 {
 	std::string name;
 	in.read(name);
-	auto state = new TaskState(name);
+	auto state = new TaskState(type, name);
 	return state;
 }
 
@@ -117,7 +131,7 @@ void TaskState::write(FJson::Writer &out) const
 /// TaskType
 
 TaskType::TaskType(Project *project, std::string name)
-	:mProject(project), mName(name), mStartState(NULL)
+	:mProject(project), mName(name), mNextStateId(0), mStartState(NULL)
 {
 	if(project) {
 		project->mTypes[name] = this;
@@ -151,12 +165,13 @@ void TaskType::setStartState(TaskState *state)
 	if(mStartState == state) {
 		return;
 	}
+	state->ownedBy(this);
 	if(mStartState) {
 		mStartState->unref();
 	}
 	state->ref();
 	mStartState = state;
-	if(getStateId(state) == -1) {
+	if(state->getId() == TaskState::INVALID_ID) {
 		mStates.push_back(state);
 	}
 }
@@ -164,8 +179,9 @@ void TaskType::setStartState(TaskState *state)
 void TaskType::setEndStates(std::set<TaskState*> states)
 {
 	for(TaskState *state : states) {
+		state->ownedBy(this);
 		state->ref();
-		if(getStateId(state) == -1) {
+		if(state->getId() == TaskState::INVALID_ID) {
 			mStates.push_back(state);
 		}
 	}
@@ -180,6 +196,8 @@ void TaskType::setTransition(TaskState *from, TaskState *to, bool create)
 {
 	auto iter = mStateMap.find(from);
 	std::set<TaskState*> *set;
+	from->ownedBy(this);
+	to->ownedBy(this);
 	if(iter == mStateMap.end()) {
 		if(!create) {
 			return;
@@ -191,10 +209,10 @@ void TaskType::setTransition(TaskState *from, TaskState *to, bool create)
 	}
 
 	if(create) {
-		if(getStateId(from) == -1) {
+		if(from->getId() == TaskState::INVALID_ID) {
 			mStates.push_back(from);
 		}
-		if(getStateId(to) == -1) {
+		if(to->getId() == TaskState::INVALID_ID) {
 			mStates.push_back(to);
 		}
 
@@ -277,7 +295,7 @@ TaskType *TaskType::read(Project *project, FJson::Reader &in)
 		} else if(key == "states") {
 			in.startArray();
 			while(in.hasNextElement()) {
-				auto state = TaskState::read(in);
+				auto state = TaskState::read(type, in);
 				type->mStates.push_back(state);
 			}
 		} else {
@@ -306,13 +324,13 @@ void TaskType::write(FJson::Writer &out) const
 	out.writeObjectKey("deleted");
 	out.write(mIsDeleted);
 	out.writeObjectKey("start-state");
-	out.write(getStateId(mStartState));
+	out.write(mStartState->getId());
 
 	out.writeObjectKey("end-states");
 	out.startArray();
 	for(const auto state : mEndStates) {
 		out.startNextElement();
-		out.write(getStateId(state));
+		out.write(state->getId());
 	}
 	out.endArray();
 
@@ -328,7 +346,7 @@ void TaskType::write(FJson::Writer &out) const
 		if(iter != mStateMap.end()) {
 			for(const auto state : iter->second) {
 				out.startNextElement();
-				out.write(getStateId(state));
+				out.write(state->getId());
 			}
 		}
 		out.endArray();
@@ -347,22 +365,17 @@ void TaskType::write(FJson::Writer &out) const
 	out.endObject();
 }
 
-int TaskType::getStateId(TaskState *state) const
-{
-	auto iter = std::find(mStates.begin(), mStates.end(), state);
-
-	if(iter == mStates.end()) {
-		return -1;
-	}
-	return iter - mStates.begin();
-}
-
 TaskState *TaskType::getStateById(unsigned int index) const
 {
 	if(index >= mStates.size()) {
 		return NULL;
 	}
 	return mStates[index];
+}
+
+unsigned int TaskType::useNextStateId()
+{
+	return mNextStateId++;
 }
 
 /// Date
@@ -556,6 +569,13 @@ Task::Task(Project *project, std::string name)
 {
 }
 
+Task::~Task()
+{
+	for(auto event : mEvents) {
+		delete event;
+	}
+}
+
 void Task::setName(std::string newName)
 {
 	mName = newName;
@@ -677,7 +697,7 @@ void Task::write(FJson::Writer &out) const
 	out.writeObjectKey("type");
 	out.write(mType->getName());
 	out.writeObjectKey("state");
-	out.write(mType->getStateId(mState));
+	out.write(mState->getId());
 	out.writeObjectKey("closed");
 	out.write(mClosed);
 	out.writeObjectKey("events");

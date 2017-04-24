@@ -45,7 +45,7 @@ bool createProject() {
 
 /// TaskState
 bool createTaskState() {
-	auto *state = Backend::TaskState::create("test");
+	auto *state = Backend::TaskState::create(NULL, "test");
 	state->ref();
 	state->unref();
 	bool res = (state && "test" == state->getName());
@@ -54,13 +54,13 @@ bool createTaskState() {
 }
 
 bool createTaskStateAndDelete() {
-	auto *state = Backend::TaskState::create("test");
+	auto *state = Backend::TaskState::create(NULL, "test");
 	state->free();
 	return true;
 }
 
 bool createRefTaskStateAndDelete() {
-	auto *state = Backend::TaskState::create("test");
+	auto *state = Backend::TaskState::create(NULL, "test");
 	state->ref();
 	state->free();
 	bool res = (state && "test" == state->getName());
@@ -73,8 +73,8 @@ bool createRefTaskStateAndDelete() {
 bool createTaskTypeAndDelete() {
 	Backend::TaskType type(NULL, "test");
 
-	auto *state = Backend::TaskState::create("start");
-	auto *endState = Backend::TaskState::create("end");
+	auto *state = Backend::TaskState::create(&type, "start");
+	auto *endState = Backend::TaskState::create(&type, "end");
 
 	type.setStartState(state);
 	type.setEndStates({endState});
@@ -117,52 +117,53 @@ bool addAndRemoveTask() {
 }
 
 bool filterTasks() {
-	Backend::TaskList list;
+	Backend::Project project;
+	Backend::TaskList *list = project.getTaskList();
 
 	Backend::TaskType type(NULL, "type");
 
-	auto *state = Backend::TaskState::create("start");
-	auto *endState = Backend::TaskState::create("end");
+	auto *state = Backend::TaskState::create(&type, "start");
+	auto *endState = Backend::TaskState::create(&type, "end");
 
 	type.setStartState(state);
 	type.setEndStates({endState});
 	type.setTransition(state, endState);
 
-	auto *task = new Backend::Task(NULL, "test");
+	auto *task = new Backend::Task(&project, "test");
 	task->setType(&type);
-	list.addTask(task);
+	list->addTask(task);
 
-	task = new Backend::Task(NULL, "closed");
+	task = new Backend::Task(&project, "closed");
 	task->setType(&type);
 	task->setState(endState);
-	list.addTask(task);
+	list->addTask(task);
 
 	bool res = true;
 
 	auto *filter = Backend::TaskFilter::hasState("start");
-	auto tasks = list.getFiltered(filter);
+	auto tasks = list->getFiltered(filter);
 	res &= tasks.size() == 1;
 	delete filter;
 
 	filter = Backend::TaskFilter::isOpen(false);
-	tasks = list.getFiltered(filter);
+	tasks = list->getFiltered(filter);
 	res &= tasks.size() == 1;
 	delete filter;
 
 	auto *f1 = Backend::TaskFilter::isOpen(true);
 	auto *f2 = Backend::TaskFilter::hasState("end");
 	auto *filter2 = Backend::TaskFilter::orOf(f1, f2);
-	tasks = list.getFiltered(filter2);
+	tasks = list->getFiltered(filter2);
 	res &= tasks.size() == 2;
 
 	filter = Backend::TaskFilter::andOf(f1->clone(), f2->clone());
-	tasks = list.getFiltered(filter);
+	tasks = list->getFiltered(filter);
 	res &= tasks.size() == 0;
 	delete filter;
 
 	auto f3 = Backend::TaskFilter::notOf(f1->clone());
 	filter = Backend::TaskFilter::andOf(f3, f2->clone());
-	tasks = list.getFiltered(filter);
+	tasks = list->getFiltered(filter);
 	res &= tasks.size() == 1;
 	delete filter;
 	delete filter2;
@@ -171,90 +172,91 @@ bool filterTasks() {
 }
 
 bool searchTasks() {
-	Backend::TaskList list;
+	Backend::Project project;
+	Backend::TaskList *list = project.getTaskList();
 
-	Backend::TaskType type(NULL, "type");
+	auto *type = new Backend::TaskType(&project, "type");
 
-	auto *state = Backend::TaskState::create("start");
-	auto *endState = Backend::TaskState::create("end");
+	auto *state = Backend::TaskState::create(type, "start");
+	auto *endState = Backend::TaskState::create(type, "end");
 
-	type.setStartState(state);
-	type.setEndStates({endState});
-	type.setTransition(state, endState);
+	type->setStartState(state);
+	type->setEndStates({endState});
+	type->setTransition(state, endState);
 
-	auto *task = new Backend::Task(NULL, "test lol");
-	task->setType(&type);
-	list.addTask(task);
+	auto *task = new Backend::Task(&project, "test lol");
+	task->setType(type);
+	list->addTask(task);
 
-	auto *task2 = new Backend::Task(NULL, "closed lol");
-	task2->setType(&type);
+	auto *task2 = new Backend::Task(&project, "closed lol");
+	task2->setType(type);
 	task2->setState(endState);
-	list.addTask(task2);
+	list->addTask(task2);
 
-	auto *task3 = new Backend::Task(NULL, "closed");
-	task3->setType(&type);
+	auto *task3 = new Backend::Task(&project, "closed");
+	task3->setType(type);
 	task3->setState(endState);
-	list.addTask(task3);
+	list->addTask(task3);
 
 	bool res = true;
 
 	auto search = Backend::Search::create("\"test\"");
-	auto tasks = list.getFiltered(search);
+	auto tasks = list->getFiltered(search);
 	res &= tasks.size() == 1;
 	res &= tasks[0] == task;
 	delete search;
 
 	search = Backend::Search::create("- \"test\"");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 2;
 	res &= tasks[0] == task2;
 	res &= tasks[1] == task3;
 	delete search;
 
 	search = Backend::Search::create("\"test\" and \"closed\"");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 0;
 	delete search;
 
 	search = Backend::Search::create("\"test\" or \"closed\"");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 3;
 	delete search;
 
 	search = Backend::Search::create("\"lol\" and not \"test\"");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 1;
 	res &= tasks[0] == task2;
 	delete search;
 
 	search = Backend::Search::create("not \"test\" and \"lol\"");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 1;
 	res &= tasks[0] == task2;
 	delete search;
 
 	search = Backend::Search::create("not (\"test\" and \"lol\")");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 2;
 	res &= tasks[0] == task2;
 	res &= tasks[1] == task3;
 	delete search;
 
 	search = Backend::Search::create("open");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 1;
 	res &= tasks[0] == task;
 	delete search;
 
 	search = Backend::Search::create("closed");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 2;
 	res &= tasks[0] == task2;
 	res &= tasks[1] == task3;
 	delete search;
 
 	search = Backend::Search::create("state(\"end\")");
-	tasks = list.getFiltered(search);
+	tasks = list->getFiltered(search);
 	res &= tasks.size() == 2;
 	res &= tasks[0] == task2;
 	res &= tasks[1] == task3;
@@ -274,18 +276,19 @@ openProjectPerf()
 
 bool taskEvents()
 {
-	Backend::TaskList list;
+	Backend::Project project;
+	Backend::TaskList *list = project.getTaskList();
 	bool res = true;
 
-	Backend::TaskType type(NULL, "type");
+	auto *type = new Backend::TaskType(&project, "type");
 
-	auto *state = Backend::TaskState::create("start");
-	type.setStartState(state);
-	type.setEndStates({state});
+	auto *state = Backend::TaskState::create(type, "start");
+	type->setStartState(state);
+	type->setEndStates({state});
 
-	auto *task = new Backend::Task(NULL, "test");
-	task->setType(&type);
-	list.addTask(task);
+	auto *task = new Backend::Task(&project, "test");
+	task->setType(type);
+	list->addTask(task);
 
 	auto *event = new Backend::CommentEvent("Hello");
 	task->addEvent(event);
@@ -294,8 +297,6 @@ bool taskEvents()
 	res &= events.size() == 1;
 	auto *e = dynamic_cast<Backend::CommentEvent*>(events[0]);
 	res &= e->getContent() == "Hello";
-
-	delete event;
 
 	return res;
 }

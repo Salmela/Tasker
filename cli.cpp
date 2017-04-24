@@ -289,10 +289,10 @@ void ModifyTaskTypeView::render(CliInterface *parent)
 	if(!type) {
 		std::cout << "Creating new type '" << mName << "'\n";
 		type = new Backend::TaskType(parent->getProject(), mName);
-		auto state = Backend::TaskState::create("not-started");
+		auto state = Backend::TaskState::create(type, "not-started");
 		type->setStartState(state);
 
-		auto endState = Backend::TaskState::create("done");
+		auto endState = Backend::TaskState::create(type, "done");
 		type->setEndStates({endState});
 
 		type->setTransition(state, endState);

@@ -11,6 +11,7 @@ namespace Tasker {
 namespace Backend {
 
 class Task;
+class TaskType;
 class Project;
 
 class User
@@ -28,24 +29,28 @@ private:
 	static User ANONYMOUS_VALUE;
 };
 
-/* The task state should be feature of TaskType */
 class TaskState
 {
 public:
-	static TaskState *create(std::string name);
+	static TaskState *create(TaskType *type, std::string name);
+	static const unsigned int INVALID_ID = 0xffffffff;
 
+	void ownedBy(const TaskType *type);
 	void rename(std::string newName);
 	std::string getName() const;
+	unsigned int getId() const;
 	void ref();
 	void unref();
 	void free();
 
-	static TaskState *read(FJson::Reader &in);
+	static TaskState *read(TaskType *type, FJson::Reader &in);
 	void write(FJson::Writer &out) const;
 private:
-	TaskState(std::string name);
+	TaskState(TaskType *type, std::string name);
 
+	TaskType *mType;
 	std::string mName;
+	unsigned int mId;
 	int mRefCount;
 	bool mIsDeleted;
 };
@@ -69,13 +74,15 @@ public:
 
 	static TaskType *read(Project *project, FJson::Reader &in);
 	void write(FJson::Writer &out) const;
-	int getStateId(TaskState *state) const;
 	TaskState *getStateById(unsigned int index) const;
+
+	unsigned int useNextStateId();
 
 private:
 	Project *mProject;
 	std::string mName;
 	bool mIsDeleted;
+	int mNextStateId;
 	TaskState *mStartState;
 	std::set<TaskState*> mEndStates;
 	std::map<TaskState*, std::set<TaskState*> > mStateMap;
@@ -97,9 +104,8 @@ private:
 	struct tm *mTime;//TODO smart pointer?
 };
 
-class TaskEvent;
-
-typedef TaskEvent *(*TaskConstructor)();
+//class TaskEvent;
+//typedef TaskEvent *(*TaskConstructor)();
 
 class TaskEvent
 {
@@ -166,6 +172,7 @@ class Task
 {
 public:
 	Task(Project *project, std::string name);
+	~Task();
 
 	void setName(std::string name);
 	void setDescription(std::string text);
