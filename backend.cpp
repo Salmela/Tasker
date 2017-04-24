@@ -54,7 +54,7 @@ TaskState::TaskState(TaskType *type, std::string name)
 	:mName(name)
 {
 	mType = type;
-	mId = type ? type->useNextStateId() : 0;
+	mId = type ? type->useNextStateId(this) : TaskState::INVALID_ID;
 	mIsDeleted = false;
 	mRefCount = 0;
 }
@@ -171,9 +171,6 @@ void TaskType::setStartState(TaskState *state)
 	}
 	state->ref();
 	mStartState = state;
-	if(state->getId() == TaskState::INVALID_ID) {
-		mStates.push_back(state);
-	}
 }
 
 void TaskType::setEndStates(std::set<TaskState*> states)
@@ -181,9 +178,6 @@ void TaskType::setEndStates(std::set<TaskState*> states)
 	for(TaskState *state : states) {
 		state->ownedBy(this);
 		state->ref();
-		if(state->getId() == TaskState::INVALID_ID) {
-			mStates.push_back(state);
-		}
 	}
 	for(TaskState *state : mEndStates) {
 		state->unref();
@@ -209,13 +203,6 @@ void TaskType::setTransition(TaskState *from, TaskState *to, bool create)
 	}
 
 	if(create) {
-		if(from->getId() == TaskState::INVALID_ID) {
-			mStates.push_back(from);
-		}
-		if(to->getId() == TaskState::INVALID_ID) {
-			mStates.push_back(to);
-		}
-
 		set->insert(to);
 		to->ref();
 	} else {
@@ -295,8 +282,7 @@ TaskType *TaskType::read(Project *project, FJson::Reader &in)
 		} else if(key == "states") {
 			in.startArray();
 			while(in.hasNextElement()) {
-				auto state = TaskState::read(type, in);
-				type->mStates.push_back(state);
+				TaskState::read(type, in);
 			}
 		} else {
 			in.skipValue(&type->mForeignKeys);
@@ -373,8 +359,9 @@ TaskState *TaskType::getStateById(unsigned int index) const
 	return mStates[index];
 }
 
-unsigned int TaskType::useNextStateId()
+unsigned int TaskType::useNextStateId(TaskState *state)
 {
+	mStates.push_back(state);
 	return mNextStateId++;
 }
 

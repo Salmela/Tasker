@@ -76,7 +76,7 @@ public:
 	void write(FJson::Writer &out) const;
 	TaskState *getStateById(unsigned int index) const;
 
-	unsigned int useNextStateId();
+	unsigned int useNextStateId(TaskState *state);
 
 private:
 	Project *mProject;
