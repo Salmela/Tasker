@@ -366,20 +366,26 @@ void TaskView::render(CliInterface *parent)
 			std::cout << " " << index++ << ". ";
 			std::cout << task->getName() << "\n";
 		}
+
+		std::cout << "\n";
 	}
 
 	for(auto *event : mTask->getEvents()) {
 		auto *comment = dynamic_cast<Backend::CommentEvent*>(event);
+		auto *stateChange = dynamic_cast<Backend::StateChangeEvent*>(event);
+
+		std::cout << event->getCreationTime()->getFormattedTime("%d.%m.%Y")
+		          << " by " << event->getUser()->getName() << "\n";
 		if(comment) {
-			std::cout << comment->getCreationTime()->getFormattedTime("%d.%m.%Y")
-			          << " by " << comment->getUser()->getName() << "\n";
 			std::cout << comment->getContent();
+		} else if(stateChange) {
+			std::cout << "State changed from " << stateChange->from()->getName()
+			          << " to " << stateChange->to()->getName() << "\n";
 		} else {
 			std::cout << "Unknown event\n";
 		}
+		std::cout << "\n";
 	}
-
-	std::cout << "\n";
 
 	std::string command;
 	std::vector<std::string> args;
@@ -393,8 +399,7 @@ void TaskView::render(CliInterface *parent)
 	} else if(command == "n" || command == "new") {
 		parent->newView(new CreateTaskView(mTask));
 	} else if(command == "c" || command == "comment") {
-		//Comment
-		auto *comment = new Backend::CommentEvent(trim(openEditor("")));
+		auto *comment = new Backend::CommentEvent(mTask, trim(openEditor("")));
 		mTask->addEvent(comment);
 	} else if(command == "s" || command == "state") {
 		//Change the state

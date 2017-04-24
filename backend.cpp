@@ -410,7 +410,12 @@ Date &Date::operator=(const Date &other)
 /// TaskEvent
 
 TaskEvent::TaskEvent()
-	:mUser(User::ANONYMOUS)
+	:mUser(User::ANONYMOUS), mTask(NULL)
+{
+}
+
+TaskEvent::TaskEvent(Task *task)
+	:mUser(User::ANONYMOUS), mTask(task)
 {
 }
 
@@ -494,6 +499,38 @@ User *TaskEvent::getUser() const
 	return mUser;
 }
 
+void TaskEvent::setTask(Task *task)
+{
+	if(mTask) {
+		throw "Task can't be set twice.";
+	}
+	mTask = task;
+}
+
+Task *TaskEvent::getTask() const
+{
+	return mTask;
+}
+
+StateChangeEvent::StateChangeEvent(Task *task, TaskState *from, TaskState *to)
+	:TaskEvent(task)
+{
+	mFromState = from->getId();
+	mToState = to->getId();
+}
+
+TaskState *StateChangeEvent::from() const
+{
+	TaskType *type = getTask()->getType();
+	return type->getStateById(mFromState);
+}
+
+TaskState *StateChangeEvent::to() const
+{
+	TaskType *type = getTask()->getType();
+	return type->getStateById(mToState);
+}
+
 bool StateChangeEvent::readInternal(FJson::Reader &in, std::string key)
 {
 	if(key == "from") {
@@ -514,8 +551,8 @@ void StateChangeEvent::writeEvent(FJson::Writer &out) const
 	out.write(mToState);
 }
 
-CommentEvent::CommentEvent(std::string content)
-	:mContent(content)
+CommentEvent::CommentEvent(Task *task, std::string content)
+	:TaskEvent(task), mContent(content)
 {
 }
 
@@ -602,6 +639,7 @@ bool Task::setState(TaskState *newState)
 	if(!mType->canChange(mState, newState)) {
 		return false;
 	}
+	addEvent(new StateChangeEvent(this, mState, newState));
 	mState = newState;
 	return true;
 }
@@ -669,6 +707,9 @@ Task *Task::read(Project *project, FJson::Reader &in)
 		}
 	}
 	task->mState = task->mType->getStateById(state);
+	for(auto event : task->mEvents) {
+		event->setTask(task);
+	}
 	return task;
 }
 

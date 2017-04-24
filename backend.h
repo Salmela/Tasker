@@ -110,26 +110,37 @@ private:
 class TaskEvent
 {
 public:
-	TaskEvent();
 	virtual ~TaskEvent();
 	static TaskEvent *read(Project *project, FJson::Reader &in);
 	void write(FJson::Writer &out) const;
 	const Date *getCreationTime() const;
 	void setUser(User *user);
 	User *getUser() const;
+	void setTask(Task *task);
 
 	virtual std::string getName() const {return "unknown";};
+protected:
+	TaskEvent();
+	TaskEvent(Task *task);
+	Task *getTask() const;
 private:
 	virtual bool readInternal(FJson::Reader &in, std::string key) {return false;};
 	virtual void writeEvent(FJson::Writer &out) const {};
 
 	User *mUser;
+	Task *mTask;
 	Date mDate;
 	FJson::TokenCache mForeignKeys;
 };
 
 class StateChangeEvent : public TaskEvent
 {
+public:
+	StateChangeEvent() {};
+	StateChangeEvent(Task *task, TaskState *from, TaskState *to);
+
+	TaskState *from() const;
+	TaskState *to() const;
 private:
 	std::string getName() const override { return "STATE_CHANGE"; }
 	bool readInternal(FJson::Reader &in, std::string key) override;
@@ -141,7 +152,7 @@ class CommentEvent : public TaskEvent
 {
 public:
 	CommentEvent() {};
-	CommentEvent(std::string content);
+	CommentEvent(Task *task, std::string content);
 	const std::string getContent() const {return mContent;};
 private:
 	std::string getName() const override { return "COMMENT"; }

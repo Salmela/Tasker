@@ -283,20 +283,38 @@ bool taskEvents()
 	auto *type = new Backend::TaskType(&project, "type");
 
 	auto *state = Backend::TaskState::create(type, "start");
+	auto *endState = Backend::TaskState::create(type, "end");
+
 	type->setStartState(state);
-	type->setEndStates({state});
+	type->setEndStates({endState});
+	type->setTransition(state, endState);
 
 	auto *task = new Backend::Task(&project, "test");
 	task->setType(type);
 	list->addTask(task);
 
-	auto *event = new Backend::CommentEvent("Hello");
+	auto *event = new Backend::CommentEvent(task, "Hello");
 	task->addEvent(event);
 
-	const std::vector<Backend::TaskEvent*> events = task->getEvents();
+	std::vector<Backend::TaskEvent*> events = task->getEvents();
 	res &= events.size() == 1;
 	auto *e = dynamic_cast<Backend::CommentEvent*>(events[0]);
+	if(!e) return false;
 	res &= e->getContent() == "Hello";
+
+	//state change
+	task = new Backend::Task(&project, "test2");
+	task->setType(type);
+	list->addTask(task);
+
+	task->setState(endState);
+
+	events = task->getEvents();
+	res &= events.size() == 1;
+	auto *e2 = dynamic_cast<Backend::StateChangeEvent*>(events[0]);
+	if(!e2) return false;
+	res &= e2->from() == state;
+	res &= e2->to() == endState;
 
 	return res;
 }
