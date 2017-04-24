@@ -16,7 +16,7 @@ class Project;
 class User
 {
 public:
-	static User *anonymous;
+	static User *ANONYMOUS;
 
 	User(std::string name) :mName(name) {};
 	std::string getName() {return mName;};
@@ -25,6 +25,7 @@ private:
 	std::string mName;
 	std::string mEmail;
 	std::vector<std::string> mNickNames;
+	static User ANONYMOUS_VALUE;
 };
 
 /* The task state should be feature of TaskType */

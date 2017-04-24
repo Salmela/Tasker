@@ -46,7 +46,8 @@ std::vector<std::string> split(const std::string &str, char delim) {
 	return elements;
 }
 
-User *User::anonymous = new User("anonymous");
+User User::ANONYMOUS_VALUE("anonymous");
+User *User::ANONYMOUS = &User::ANONYMOUS_VALUE;
 
 /// TaskState
 TaskState::TaskState(std::string name)
@@ -408,9 +409,8 @@ Date &Date::operator=(const Date &other)
 
 /// TaskEvent
 
-
 TaskEvent::TaskEvent()
-	:mUser(User::anonymous)
+	:mUser(User::ANONYMOUS)
 {
 }
 
@@ -467,7 +467,7 @@ void TaskEvent::write(FJson::Writer &out) const
 	out.writeObjectKey("date");
 	out.write(mDate.getMachineTime());
 
-	if(mUser != User::anonymous) {
+	if(mUser != User::ANONYMOUS) {
 		out.writeObjectKey("user");
 		out.write(mUser->getName());
 	}
@@ -483,7 +483,7 @@ const Date *TaskEvent::getCreationTime() const
 
 void TaskEvent::setUser(User *user)
 {
-	if(mUser != User::anonymous) {
+	if(mUser != User::ANONYMOUS) {
 		throw "User can't be set twice.";
 	}
 	mUser = user;
@@ -1137,7 +1137,7 @@ TaskType *Project::getType(std::string name)
 User *Project::getMyUser()
 {
 	if(!mMyUser) {
-		return User::anonymous;
+		return User::ANONYMOUS;
 	}
 	return mMyUser;
 }
