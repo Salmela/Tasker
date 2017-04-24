@@ -51,12 +51,15 @@ User *User::ANONYMOUS = &User::ANONYMOUS_VALUE;
 
 /// TaskState
 TaskState::TaskState(TaskType *type, std::string name)
-	:mName(name)
+	:mType(type), mName(name), mRefCount(0), mIsDeleted(false)
 {
-	mType = type;
 	mId = type ? type->useNextStateId(this) : TaskState::INVALID_ID;
-	mIsDeleted = false;
-	mRefCount = 0;
+}
+
+TaskState::TaskState(TaskType *type, std::string name, unsigned int id)
+	:mType(type), mName(name), mRefCount(0), mIsDeleted(false)
+{
+	mId = type->useStateId(this, id);
 }
 
 TaskState *TaskState::create(TaskType *type, std::string name)
@@ -117,21 +120,37 @@ void TaskState::free()
 
 TaskState *TaskState::read(TaskType *type, FJson::Reader &in)
 {
-	std::string name;
-	in.read(name);
-	auto state = new TaskState(type, name);
+	std::string name, key;
+	unsigned int id = TaskState::INVALID_ID;
+	in.startObject();
+	while(in.readObjectKey(key)) {
+		if(key == "name") {
+			in.read(name);
+		} else if(key == "id") {
+			in.read(id);
+		}
+	}
+	if(id == TaskState::INVALID_ID || name.empty()) {
+		throw "id and name must be set in TaskState json object.";
+	}
+	auto state = new TaskState(type, name, id);
 	return state;
 }
 
 void TaskState::write(FJson::Writer &out) const
 {
+	out.startObject();
+	out.writeObjectKey("name");
 	out.write(mName);
+	out.writeObjectKey("id");
+	out.write(mId);
+	out.endObject();
 }
 
 /// TaskType
 
 TaskType::TaskType(Project *project, std::string name)
-	:mProject(project), mName(name), mNextStateId(0), mStartState(NULL)
+	:mProject(project), mName(name), mStartState(NULL)
 {
 	if(project) {
 		project->mTypes[name] = this;
@@ -362,7 +381,15 @@ TaskState *TaskType::getStateById(unsigned int index) const
 unsigned int TaskType::useNextStateId(TaskState *state)
 {
 	mStates.push_back(state);
-	return mNextStateId++;
+	return mStates.size() - 1;
+}
+
+unsigned int TaskType::useStateId(TaskState *state, unsigned int id)
+{
+	auto newSize = std::max((unsigned int)mStates.size(), id + 1);
+	mStates.resize(newSize, NULL);
+	mStates[id] = state;
+	return id;
 }
 
 /// Date

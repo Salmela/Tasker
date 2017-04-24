@@ -47,6 +47,7 @@ public:
 	void write(FJson::Writer &out) const;
 private:
 	TaskState(TaskType *type, std::string name);
+	TaskState(TaskType *type, std::string name, unsigned int id);
 
 	TaskType *mType;
 	std::string mName;
@@ -77,12 +78,12 @@ public:
 	TaskState *getStateById(unsigned int index) const;
 
 	unsigned int useNextStateId(TaskState *state);
+	unsigned int useStateId(TaskState *state, unsigned int id);
 
 private:
 	Project *mProject;
 	std::string mName;
 	bool mIsDeleted;
-	int mNextStateId;
 	TaskState *mStartState;
 	std::set<TaskState*> mEndStates;
 	std::map<TaskState*, std::set<TaskState*> > mStateMap;
