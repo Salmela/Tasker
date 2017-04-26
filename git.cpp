@@ -25,9 +25,15 @@
 namespace Tasker {
 namespace Backend {
 
+int GitBackend::refs_to_lib = 0;
+
 GitBackend::GitBackend()
 	:mRepo(NULL), mTreeBuilder(NULL)
 {
+	if(GitBackend::refs_to_lib == 0) {
+		git_threads_init();
+	}
+	GitBackend::refs_to_lib++;
 }
 
 GitBackend::~GitBackend()
@@ -37,6 +43,10 @@ GitBackend::~GitBackend()
 	}
 	if(mRepo) {
 		git_repository_free(mRepo);
+	}
+	GitBackend::refs_to_lib--;
+	if(GitBackend::refs_to_lib == 0) {
+		git_threads_shutdown();
 	}
 }
 

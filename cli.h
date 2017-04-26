@@ -55,6 +55,7 @@ class TaskListView : public View
 {
 public:
 	TaskListView();
+	~TaskListView();
 	void setFilter(Backend::TaskFilter *filter);
 	void render(CliInterface *parent) override;
 private:

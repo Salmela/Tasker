@@ -113,6 +113,7 @@ private:
 class AssocArray {
 public:
 	AssocArray(Reader *reader);
+	~AssocArray();
 	bool has(std::string key) const;
 	TokenCache *get(std::string key);
 	const std::map<std::string, TokenCache*> getValues();

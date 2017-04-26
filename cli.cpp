@@ -212,8 +212,14 @@ TaskListView::TaskListView()
 {
 }
 
+TaskListView::~TaskListView()
+{
+	delete mFilter;
+}
+
 void TaskListView::setFilter(Backend::TaskFilter *filter)
 {
+	delete mFilter;
 	mFilter = filter;
 }
 

@@ -34,6 +34,7 @@ private:
 
 	struct git_repository *mRepo;
 	struct git_treebuilder *mTreeBuilder;
+	static int refs_to_lib;
 };
 
 };

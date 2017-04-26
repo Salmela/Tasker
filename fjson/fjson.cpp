@@ -609,6 +609,13 @@ AssocArray::AssocArray(Reader *reader)
 	read();
 }
 
+AssocArray::~AssocArray()
+{
+	for(const auto &entry : mValues) {
+		delete entry.second;
+	}
+}
+
 void AssocArray::read()
 {
 	if(mReader->mToken.type != OBJECT) {
