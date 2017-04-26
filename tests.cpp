@@ -18,6 +18,7 @@
  * Boston, MA 02110-1301, USA.
  */
 #include <iostream>
+#include <unistd.h>
 
 #include "backend.h"
 
@@ -35,10 +36,32 @@ bool dateTest() {
 }
 
 bool createProject() {
-	auto *project = Backend::Project::create("./");
+	char file[] = "/tmp/create-project-XXXXXX";
+	if(!mkdtemp(file)) return false;
+	auto *project = Backend::Project::create(file);
 	bool res = project->getTaskList();
 	res &= !project->getType("xyz");
 	delete project;
+
+	rmdir(file);
+
+	return res;//the dir must be empty
+}
+
+bool openProject()
+{
+	char file[] = "/tmp/open-project-XXXXXX";
+	if(!mkdtemp(file)) return false;
+	auto *project = Backend::Project::create(file);
+	bool res = project->getTaskList();
+	project->write();
+	delete project;
+
+	project = Backend::Project::open(file);
+	res &= project && project->getTaskList();
+	delete project;
+
+	rmdir(file);//the dir must be empty
 
 	return res;
 }
@@ -265,15 +288,6 @@ bool searchTasks() {
 	return res;
 }
 
-bool
-openProjectPerf()
-{
-	auto *project = Backend::Project::open("/home/me/sources/tasker");
-	bool res = project && project->getTaskList();
-	if(!res) return false;
-	return res;
-}
-
 bool taskEvents()
 {
 	Backend::Project project;
@@ -319,6 +333,13 @@ bool taskEvents()
 	return res;
 }
 
+bool openProjectPerf()
+{
+	auto *project = Backend::Project::open("/home/me/sources/tasker");
+	bool res = project && project->getTaskList();
+	return res;
+}
+
 int testMain()
 {
 //#define PERF
@@ -331,6 +352,9 @@ int testMain()
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	success = createProject();
+	std::cout << (success ? "Success" : "Failure") << "\n";
+
+	success = openProject();
 	std::cout << (success ? "Success" : "Failure") << "\n";
 
 	success = createTaskState();
