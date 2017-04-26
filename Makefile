@@ -2,7 +2,7 @@ CXXFLAGS := -c -g -Wall -ggdb3 -std=gnu++11 -Ofast
 LDFLAGS := -g
 
 FJSON_SOURCES := fjson/fjson.cpp
-SOURCES := backend.cpp
+SOURCES := backend.cpp git.cpp
 
 all: tasker test fjson-test fjson-example
 
@@ -14,7 +14,7 @@ override CPPFLAGS += -MMD
 -include $(subst .cpp,.d, $(FJSON_SOURCES))
 
 test: tests.o $(OBJECTS)
-	$(CXX) $(LDFLAGS) tests.o $(OBJECTS) -o $@
+	$(CXX) $(LDFLAGS) tests.o $(OBJECTS) -lgit2 -o $@
 
 fjson-test: fjson/tests.o $(FJSON_OBJECTS)
 	$(CXX) $(LDFLAGS) fjson/tests.o $(FJSON_OBJECTS) -o $@
@@ -23,7 +23,7 @@ fjson-example: fjson/example.o $(FJSON_OBJECTS)
 	$(CXX) $(LDFLAGS) fjson/example.o $(FJSON_OBJECTS) -o $@
 
 tasker: cli.o $(OBJECTS)
-	$(CXX) $(LDFLAGS) cli.o $(OBJECTS) -o $@
+	$(CXX) $(LDFLAGS) cli.o $(OBJECTS) -lgit2 -o $@
 
 clean:
 	rm -f test tasker *.o *.d fjson/*.o fjson/*.d

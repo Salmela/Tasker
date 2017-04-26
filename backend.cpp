@@ -25,6 +25,7 @@
 #include <ctime>
 
 #include "backend.h"
+#include "git.h"
 
 namespace Tasker {
 namespace Backend {
@@ -1173,15 +1174,24 @@ Project *Project::create(std::string dirname)
 {
 	auto project = new Project();
 	project->mDirname = dirname;
+	project->mTaskStorage = GitBackend::create(dirname);
 	return project;
 }
 
 Project *Project::open(std::string dirname)
 {
 	auto project = new Project();
-	project->mDirname = Config::getTaskerData(dirname);
+	std::string source;
+	project->mDirname = Config::getTaskerData(dirname, &source);
 	if(project->mDirname.empty()) {
 		project->mDirname = dirname;
+	}
+	project->mTaskStorage = GitBackend::open(dirname);
+	if(!project->mTaskStorage) {
+		throw "Failed to open task storage";
+	}
+	if(!source.empty()) {
+		project->mSrcStorage = GitBackend::open(source);
 	}
 	if(project->read()) {
 		return project;
@@ -1192,12 +1202,15 @@ Project *Project::open(std::string dirname)
 }
 
 Project::Project()
-	:mMyUser(NULL)
+	:mMyUser(NULL), mSrcStorage(NULL), mTaskStorage(NULL)
 {
 }
 
 Project::~Project()
 {
+	if(mSrcStorage) delete mSrcStorage;
+	if(mTaskStorage) delete mTaskStorage;
+
 	for(const auto &entry : mTypes) {
 		delete entry.second;
 	}
@@ -1236,9 +1249,31 @@ TaskList *Project::getTaskList()
 
 void Project::write()
 {
+	writeMain();
+	writeTasks();
+
+	if(mTaskStorage) {
+		//mTaskStorage->commit();
+	}
+}
+
+std::streambuf *Project::getFileStream(std::string path)
+{
+	if(1) {
+		std::filebuf *buf = new std::filebuf;
+		buf->open(mDirname + "/" + path, std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
+		return buf;
+	} else {
+		return new GitFileBuffer(mTaskStorage, path);
+	}
+}
+
+void Project::writeMain()
+{
 	if(mDirname.empty()) return;
 
-	std::ofstream stream(mDirname + "/tasker.conf");
+	std::streambuf *buf = getFileStream("tasker.conf");
+	std::ostream stream(buf);
 
 	FJson::Writer out(stream, true);
 	out.startObject();
@@ -1260,12 +1295,13 @@ void Project::write()
 	out.write(mForeignKeys);
 	out.endObject();
 
-	writeTasks();
+	delete buf;
 }
 
 void Project::writeTasks()
 {
-	std::ofstream stream(mDirname + "/" + mTaskFile);
+	std::streambuf *buf = getFileStream(mTaskFile);
+	std::ostream stream(buf);
 
 	FJson::Writer out(stream, true);
 
@@ -1275,6 +1311,7 @@ void Project::writeTasks()
 		task->write(out);
 	}
 	out.endArray();
+	delete buf;
 }
 
 bool Project::read()
@@ -1367,13 +1404,19 @@ static bool startsWith(std::string &prefix, std::string &value) {
 	return std::equal(prefix.begin(), prefix.end(), value.begin());
 }
 
-std::string Config::getTaskerData(std::string path)
+std::string Config::getTaskerData(std::string path, std::string *source)
 {
 	//TODO what if there is nested project, we should choose the deepest match
 	for(auto *repository : Config::mConfig.mRepositories) {
 		if(startsWith(repository->source, path)) {
+			if(source) {
+				*source = repository->source;
+			}
 			return repository->data;
 		}
+	}
+	if(source) {
+		*source = "";
 	}
 	return "";
 }

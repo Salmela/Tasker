@@ -13,6 +13,7 @@ namespace Backend {
 class Task;
 class TaskType;
 class Project;
+class GitBackend;
 
 class User
 {
@@ -312,8 +313,12 @@ private:
 	TaskList mList;
 	FJson::TokenCache mForeignKeys;
 
+	GitBackend *mSrcStorage, *mTaskStorage;
+
 	bool read();
+	void writeMain();
 	void writeTasks();
+	std::streambuf *getFileStream(std::string path);
 
 	friend TaskType;
 };
@@ -321,7 +326,7 @@ private:
 class Config//< TODO this object should be thread safe
 {
 public:
-	static std::string getTaskerData(std::string path);
+	static std::string getTaskerData(std::string path, std::string *source = NULL);
 	static void setTaskerData(std::string path, std::string source);
 private:
 	Config();

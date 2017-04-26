@@ -652,9 +652,9 @@ Writer::Writer(std::ostream &stream, bool doPretty)
 Writer::~Writer()
 {
 	if(!mStack.empty()) throw ApiException("Some objects or arrays are not closed.");
-	if(mDoPrettyPrint) {
-		mStream.put('\n');
-	}
+	//if(mDoPrettyPrint) {
+	//	mStream.put('\n');
+	//}
 }
 
 void Writer::valueStateTransition()
