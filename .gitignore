@@ -1,5 +1,7 @@
-tasker
-test
+/tasker
+/test
+/fjson-test
+/fjson-example
 /demo
 
 *.d
