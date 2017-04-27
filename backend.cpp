@@ -1362,6 +1362,7 @@ bool Project::read()
 			in.skipValue(&mForeignKeys);
 		}
 	}
+	delete buf;
 
 	if(!mTaskFile.empty()) {
 		std::streambuf *buf = getInStream(mTaskFile);
@@ -1374,6 +1375,7 @@ bool Project::read()
 			auto *task = Task::read(this, in);
 			mList.addTask(task);
 		}
+		delete buf;
 	}
 	return true;
 }

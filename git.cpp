@@ -119,6 +119,9 @@ void GitBackend::commit()
 		msg.c_str(), tree, head ? 1 : 0, (const git_commit**)&head)) {
 		throw "Failed to create commit";
 	}
+	git_commit_free(head);
+	git_signature_free(author);
+	git_tree_free(tree);
 
 	git_treebuilder_free(mTreeBuilder);
 	mTreeBuilder = NULL;
@@ -150,14 +153,17 @@ std::string GitBackend::getNextCommitMessage(struct git_commit *head)
 
 std::streambuf *GitBackend::getFile(std::string path)
 {
-	git_commit *head = getHead();
 	git_tree *root;
+	git_commit *head = getHead();
 	git_commit_tree(&root, head);
+	git_commit_free(head);
 
 	git_tree_entry *entry;
 	if(git_tree_entry_bypath(&entry, root, path.c_str())) {
+		git_tree_free(root);
 		return NULL;
 	}
+	git_tree_free(root);
 	if(git_tree_entry_type(entry) != GIT_OBJ_BLOB) {
 		throw "entry is not a file";
 	}
