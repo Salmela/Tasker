@@ -659,9 +659,6 @@ Writer::Writer(std::ostream &stream, bool doPretty)
 Writer::~Writer()
 {
 	if(!mStack.empty()) throw ApiException("Some objects or arrays are not closed.");
-	//if(mDoPrettyPrint) {
-	//	mStream.put('\n');
-	//}
 }
 
 void Writer::valueStateTransition()
@@ -746,6 +743,11 @@ void Writer::endObject()
 	if(mStack.empty() || mStack.back() != '{') throw ApiException("Mismatching api calls.");
 	Token t(END_OBJECT);
 	writeToken(&t);
+
+	if(mStack.empty()) {
+		Token t(END);
+		writeToken(&t);
+	}
 }
 
 void Writer::writeObjectKey(std::string key)
@@ -779,6 +781,11 @@ void Writer::endArray()
 	if(mStack.empty() || mStack.back() != '[') throw ApiException("Mismatching api calls.");
 	Token t(END_ARRAY);
 	writeToken(&t);
+
+	if(mStack.empty()) {
+		Token t(END);
+		writeToken(&t);
+	}
 }
 
 void Writer::startNextElement()
@@ -854,6 +861,9 @@ void Writer::writeToken(Token *token)
 			newState = S_SEPARATOR;
 			break;
 		case END:
+			if(mDoPrettyPrint) {
+				mStream.put('\n');
+			}
 			break;
 	}
 	mState = newState;
