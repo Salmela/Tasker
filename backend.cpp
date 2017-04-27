@@ -1186,7 +1186,7 @@ Project *Project::open(std::string dirname)
 	if(project->mDirname.empty()) {
 		project->mDirname = dirname;
 	}
-	project->mTaskStorage = GitBackend::open(dirname);
+	project->mTaskStorage = GitBackend::open(project->mDirname);
 	if(!project->mTaskStorage) {
 		throw "Failed to open task storage";
 	}
