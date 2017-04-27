@@ -36,7 +36,7 @@ bool dateTest() {
 }
 
 bool createProject() {
-	char file[] = "/tmp/create-project-XXXXXX";
+	char file[] = "/tmp/tasker-create-project-XXXXXX";
 	if(!mkdtemp(file)) return false;
 	auto *project = Backend::Project::create(file);
 	bool res = project->getTaskList();
@@ -50,7 +50,7 @@ bool createProject() {
 
 bool openProject()
 {
-	char file[] = "/tmp/open-project-XXXXXX";
+	char file[] = "/tmp/tasker-open-project-XXXXXX";
 	if(!mkdtemp(file)) return false;
 	auto *project = Backend::Project::create(file);
 	bool res = project->getTaskList();

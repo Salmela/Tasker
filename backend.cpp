@@ -1253,18 +1253,31 @@ void Project::write()
 	writeTasks();
 
 	if(mTaskStorage) {
-		//mTaskStorage->commit();
+		mTaskStorage->commit();
 	}
 }
 
-std::streambuf *Project::getFileStream(std::string path)
+std::streambuf *Project::getOutStream(std::string path)
 {
-	if(1) {
+	if(!mTaskStorage) {
 		std::filebuf *buf = new std::filebuf;
 		buf->open(mDirname + "/" + path, std::ios_base::binary | std::ios_base::out | std::ios_base::trunc);
 		return buf;
 	} else {
-		return new GitFileBuffer(mTaskStorage, path);
+		return mTaskStorage->addFile(path);
+	}
+}
+
+std::streambuf *Project::getInStream(std::string path)
+{
+	if(!mTaskStorage) {
+		std::filebuf *buf = new std::filebuf;
+		buf->open(mDirname + "/" + path, std::ios_base::binary | std::ios_base::in);
+
+		if(!buf->is_open()) return NULL;
+		return buf;
+	} else {
+		return mTaskStorage->getFile(path);
 	}
 }
 
@@ -1272,7 +1285,7 @@ void Project::writeMain()
 {
 	if(mDirname.empty()) return;
 
-	std::streambuf *buf = getFileStream("tasker.conf");
+	std::streambuf *buf = getOutStream("tasker.conf");
 	std::ostream stream(buf);
 
 	FJson::Writer out(stream, true);
@@ -1300,7 +1313,7 @@ void Project::writeMain()
 
 void Project::writeTasks()
 {
-	std::streambuf *buf = getFileStream(mTaskFile);
+	std::streambuf *buf = getOutStream(mTaskFile);
 	std::ostream stream(buf);
 
 	FJson::Writer out(stream, true);
@@ -1311,6 +1324,7 @@ void Project::writeTasks()
 		task->write(out);
 	}
 	out.endArray();
+
 	delete buf;
 }
 
@@ -1320,8 +1334,9 @@ bool Project::read()
 
 	//create lock file
 
-	std::ifstream stream(mDirname + "/tasker.conf");
-	if(!stream.is_open()) return false;
+	std::streambuf *buf = getInStream("tasker.conf");
+	if(!buf) return false;
+	std::istream stream(buf);
 
 	FJson::Reader in(stream);
 	in.startObject();
@@ -1349,8 +1364,9 @@ bool Project::read()
 	}
 
 	if(!mTaskFile.empty()) {
-		std::ifstream stream(mDirname + "/" + mTaskFile);
-		if(!stream.is_open()) return false;
+		std::streambuf *buf = getInStream(mTaskFile);
+		if(!buf) return false;
+		std::istream stream(buf);
 		FJson::Reader in(stream);
 
 		in.startArray();

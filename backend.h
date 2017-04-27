@@ -318,7 +318,8 @@ private:
 	bool read();
 	void writeMain();
 	void writeTasks();
-	std::streambuf *getFileStream(std::string path);
+	std::streambuf *getOutStream(std::string path);
+	std::streambuf *getInStream(std::string path);
 
 	friend TaskType;
 };

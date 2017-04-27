@@ -31,7 +31,7 @@ GitBackend::GitBackend()
 	:mRepo(NULL), mTreeBuilder(NULL)
 {
 	if(GitBackend::refs_to_lib == 0) {
-		git_threads_init();
+		git_libgit2_init();
 	}
 	GitBackend::refs_to_lib++;
 }
@@ -46,7 +46,7 @@ GitBackend::~GitBackend()
 	}
 	GitBackend::refs_to_lib--;
 	if(GitBackend::refs_to_lib == 0) {
-		git_threads_shutdown();
+		git_libgit2_shutdown();
 	}
 }
 
@@ -68,32 +68,27 @@ GitBackend *GitBackend::create(std::string path)
 	if(git_repository_init(&backend->mRepo, path.c_str(), is_bare)) {
 		throw "repo init failed";
 	}
+	if(git_treebuilder_new(&backend->mTreeBuilder, backend->mRepo, NULL)) {
+		throw "Failed to create initial tree for repo";
+	}
+	try {
+		backend->commit();
+	} catch(...) {
+		throw "Failed to create initial commit";
+	}
 	return backend;
 }
 
-void GitBackend::addFile(std::string file, std::string content)
+GitFileBuffer *GitBackend::addFile(std::string file)
 {
-	git_oid oid;
-	git_blob *blob;
-
 	if(!mTreeBuilder) {
-		int ret = git_treebuilder_create(&mTreeBuilder, NULL);
+		int ret = git_treebuilder_new(&mTreeBuilder, mRepo, NULL);
 		if(ret) {
 			throw "Failed to create tree builder";
 		}
 	}
 
-	//TODO git_blob_create_fromchunks
-	if(git_blob_create_frombuffer(&oid, mRepo, content.c_str(), content.size())) {
-		throw "Failed to create file from string";
-	}
-	if(git_blob_lookup(&blob, mRepo, &oid)) {
-		throw "Failed to find new blob";
-	}
-	if(git_treebuilder_insert(NULL, mTreeBuilder, file.c_str(), &oid, GIT_FILEMODE_BLOB)) {
-		throw "Can't insert blob to tree";
-	}
-	git_blob_free(blob);
+	return new GitFileBuffer(this, file);
 }
 
 void GitBackend::commit()
@@ -107,7 +102,7 @@ void GitBackend::commit()
 		throw "No changes";
 	}
 
-	if(git_treebuilder_write(&oid_tree, mRepo, mTreeBuilder)) {
+	if(git_treebuilder_write(&oid_tree, mTreeBuilder)) {
 		throw "Write failed";
 	}
 
@@ -115,10 +110,15 @@ void GitBackend::commit()
 		throw "Tree lookup failed";
 	}
 
-	git_signature_default(&author, mRepo);
+	if(git_signature_default(&author, mRepo)) {
+		throw "No default user";
+	}
 	git_commit *head = getHead();
-	git_commit_create(&oid, mRepo, "HEAD", author, author, "UTF-8",
-		"test msg", tree, 1, (const git_commit**)head);
+	std::string msg = getNextCommitMessage(head);
+	if(git_commit_create(&oid, mRepo, "HEAD", author, author, "UTF-8",
+		msg.c_str(), tree, head ? 1 : 0, (const git_commit**)&head)) {
+		throw "Failed to create commit";
+	}
 
 	git_treebuilder_free(mTreeBuilder);
 	mTreeBuilder = NULL;
@@ -128,30 +128,79 @@ git_commit *GitBackend::getHead()
 {
 	git_reference *ref;
 	if(git_repository_head(&ref, mRepo)) {
-		throw "get file failed";
+		return NULL;
 	}
-	const git_oid *id = git_reference_target_peel(ref);
+	const git_oid *id = git_reference_target(ref);
 	git_commit *commit;
 	git_commit_lookup(&commit, mRepo, id);
 	git_reference_free(ref);
 	return commit;
 }
 
-std::string GitBackend::getFile(std::string path)
+std::string GitBackend::getNextCommitMessage(struct git_commit *head)
 {
-	//git_commit *head = getHead();
-	//git_tree *tree;
-	//git_commit_tree(&tree, commit);
-	return "";
+	if(!head) return "0";
+	const char *msg = git_commit_summary(head);
+
+	//lets hope that nobody manually commits
+	int index = atoi(msg) + 1;
+
+	return std::to_string(index);
+}
+
+std::streambuf *GitBackend::getFile(std::string path)
+{
+	git_commit *head = getHead();
+	git_tree *root;
+	git_commit_tree(&root, head);
+
+	git_tree_entry *entry;
+	if(git_tree_entry_bypath(&entry, root, path.c_str())) {
+		return NULL;
+	}
+	if(git_tree_entry_type(entry) != GIT_OBJ_BLOB) {
+		throw "entry is not a file";
+	}
+	git_blob *blob;
+	git_tree_entry_to_object((git_object**)&blob, mRepo, entry);
+	//TODO we should create InputStream so we would not need duplicate the content
+	std::string buf((const char*)git_blob_rawcontent(blob), 0, git_blob_rawsize(blob));
+	git_blob_free(blob);
+
+	git_tree_entry_free(entry);
+	return new std::basic_stringbuf<char>(buf);
 }
 
 GitFileBuffer::GitFileBuffer(GitBackend *backend, std::string file)
 {
+	mFile = file;
+	mBackend = backend;
 }
 
 GitFileBuffer::~GitFileBuffer()
 {
+	git_oid oid;
+	git_blob *blob;
 
+	if(git_blob_create_frombuffer(&oid, mBackend->mRepo, mBuf.c_str(), mBuf.size())) {
+		throw "Failed to create file from string";
+	}
+
+	if(git_blob_lookup(&blob, mBackend->mRepo, &oid)) {
+		throw "Failed to find new blob";
+	}
+
+	if(git_treebuilder_insert(NULL, mBackend->mTreeBuilder, mFile.c_str(), &oid, GIT_FILEMODE_BLOB)) {
+		throw "Can't insert blob to tree";
+	}
+	git_blob_free(blob);
+}
+
+int GitFileBuffer::overflow(int c)
+{
+	//TODO use the git blob streaming api
+	mBuf += c;
+	return 1;
 }
 
 };

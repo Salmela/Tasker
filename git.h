@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-//#include <ostream>
 #include <sstream>
 #include <streambuf>
 
@@ -15,7 +14,14 @@ public:
 	GitFileBuffer(GitBackend *backend, std::string file);
 	~GitFileBuffer();
 
+	void close(struct git_oid *oid);
+
 	//streamsize xsputn(const char* s, streamsize n) override;
+	int overflow(int c) override;
+private:
+	std::string mBuf;
+	std::string mFile;
+	GitBackend *mBackend;
 };
 
 class GitBackend {
@@ -25,16 +31,18 @@ public:
 	static GitBackend *open(std::string path);
 	static GitBackend *create(std::string path);
 
-	GitFileBuffer *fileStream(std::string file);
-	void addFile(std::string file, std::string content);
+	GitFileBuffer *addFile(std::string file);
+	std::streambuf *getFile(std::string path);
 	void commit();
 private:
 	struct git_commit *getHead();
-	std::string getFile(std::string path);
+	std::string getNextCommitMessage(struct git_commit *head);
 
 	struct git_repository *mRepo;
 	struct git_treebuilder *mTreeBuilder;
 	static int refs_to_lib;
+
+	friend GitFileBuffer::~GitFileBuffer();
 };
 
 };
