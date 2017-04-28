@@ -194,12 +194,14 @@ public:
 
 	void setName(std::string name);
 	void setDescription(std::string text);
+	void setAssigned(User *user);
 	void setType(TaskType *type);
 	bool setState(TaskState *state);
 	void setId(unsigned int id);
 
 	std::string getName() const;
 	std::string getDescription() const;
+	User *getAssigned() const;
 	TaskType *getType() const;
 	TaskState *getState() const;
 	int getId() const;
@@ -218,6 +220,7 @@ private:
 	Project *mProject;
 	std::string mName;
 	std::string mDesc;
+	User *mAssigned;
 	TaskType *mType;
 	TaskState *mState;
 	bool mClosed;

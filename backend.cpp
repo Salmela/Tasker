@@ -663,8 +663,8 @@ void CommitEvent::writeEvent(FJson::Writer &out) const
 /// Task
 
 Task::Task(Project *project, std::string name)
-	:mProject(project), mName(name), mType(NULL),
-	mState(NULL), mClosed(false), mId(-1)
+	:mProject(project), mName(name), mAssigned(User::ANONYMOUS),
+	mType(NULL), mState(NULL), mClosed(false), mId(-1)
 {
 }
 
@@ -709,6 +709,17 @@ void Task::setDescription(std::string text)
 std::string Task::getDescription() const
 {
 	return mDesc;
+}
+
+void Task::setAssigned(User *user)
+{
+	mAssigned = user;
+}
+
+User *Task::getAssigned() const
+{
+	if(mAssigned == User::ANONYMOUS) return NULL;
+	return mAssigned;
 }
 
 void Task::setType(TaskType *type)
@@ -785,6 +796,10 @@ Task *Task::read(Project *project, FJson::Reader &in)
 			task->mType = project->getType(type);
 		} else if(key == "state") {
 			in.read(state);
+		} else if(key == "assigned") {
+			std::string name;
+			in.read(name);
+			task->mAssigned = project->getUser(name);
 		} else if(key == "closed") {
 			in.read(task->mClosed);
 		} else if(key == "events") {
@@ -815,6 +830,10 @@ void Task::write(FJson::Writer &out) const
 
 	out.writeObjectKey("type");
 	out.write(mType->getName());
+	if(mAssigned != User::ANONYMOUS) {
+		out.writeObjectKey("assigned");
+		out.write(mAssigned->getName());
+	}
 	out.writeObjectKey("state");
 	out.write(mState->getId());
 	out.writeObjectKey("closed");

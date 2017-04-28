@@ -362,6 +362,9 @@ void TaskView::render(CliInterface *parent)
 		std::cout << "=";
 	}
 	std::cout << "\n[" << mTask->getState()->getName() << "]\n";
+	if(mTask->getAssigned()) {
+		std::cout << "assigned to: " << mTask->getAssigned()->getName() << "\n";
+	}
 	std::cout << "\n" << mTask->getDescription();
 
 	auto subTasks = mTask->getSubTasks();
@@ -406,6 +409,8 @@ void TaskView::render(CliInterface *parent)
 		parent->quit();
 	} else if(command == "n" || command == "new") {
 		parent->newView(new CreateTaskView(mTask));
+	} else if(command == "a" || command == "assign") {
+		mTask->setAssigned(parent->getProject()->getDefaultUser());
 	} else if(command == "c" || command == "comment") {
 		auto *comment = new Backend::CommentEvent(mTask, trim(openEditor("")));
 		mTask->addEvent(comment);
