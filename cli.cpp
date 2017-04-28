@@ -232,10 +232,9 @@ void TaskListView::render(CliInterface *parent)
 		std::cout << "  [Empty]\n";
 	}
 
-	unsigned int i = 1;
 	auto taskList = mList->getFiltered(mFilter);
 	for (Backend::Task *t : taskList) {
-		std::cout << " " << i++ << ". " << t->getName() << "\n";
+		std::cout << " #" << t->getId() << " " << t->getName() << "\n";
 	}
 
 	std::string command;
@@ -248,11 +247,12 @@ void TaskListView::render(CliInterface *parent)
 		std::istringstream iss(args[0]);
 		iss >> taskIndex;
 
-		if (taskIndex < 1 && taskIndex > (int)taskList.size()) {
+		Backend::Task *task = mList->getTask(taskIndex);
+		if (!task) {
 			std::cerr << "Task index is out-of-bounds.\n";
 			return;
 		}
-		parent->newView(new TaskView(taskList[taskIndex - 1]));
+		parent->newView(new TaskView(task));
 	} else if (command == "n" || command == "new") {
 		parent->newView(new CreateTaskView());
 	} else if (command == "s" || command == "search") {
@@ -354,7 +354,9 @@ TaskView::TaskView(Backend::Task *task)
 
 void TaskView::render(CliInterface *parent)
 {
-	std::string name = mTask->getName();
+	std::ostringstream stream;
+	stream << "#" << mTask->getId() << " " << mTask->getName();
+	std::string name = stream.str();
 	std::cout << name << "\n";
 	for(unsigned int i = 0; i < name.size(); i++) {
 		std::cout << "=";

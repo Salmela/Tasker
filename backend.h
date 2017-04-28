@@ -191,11 +191,13 @@ public:
 	void setDescription(std::string text);
 	void setType(TaskType *type);
 	bool setState(TaskState *state);
+	void setId(unsigned int id);
 
 	std::string getName() const;
 	std::string getDescription() const;
 	TaskType *getType() const;
 	TaskState *getState() const;
+	int getId() const;
 
 	void addSubTask(Task *task);
 	const std::vector<Task*> getSubTasks() const;
@@ -214,6 +216,7 @@ private:
 	TaskType *mType;
 	TaskState *mState;
 	bool mClosed;
+	int mId;
 	FJson::TokenCache mForeignKeys;
 
 	std::vector<TaskEvent*> mEvents;
@@ -279,12 +282,14 @@ public:
 	~TaskList();
 	void addTask(Task *task);
 	void removeTask(Task *task);
+	Task *getTask(unsigned int id);
 	const std::vector<Task*> all() const;
 	const std::vector<Task*> getFiltered(TaskFilter *filter) const;
 	unsigned int getSize() const;
 private:
 	std::vector<Task*> mTasks;
 	FJson::TokenCache mForeignKeys;
+	void getTaskId(Task *task, unsigned int id);
 };
 
 class Project

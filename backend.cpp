@@ -617,7 +617,7 @@ void CommitEvent::writeEvent(FJson::Writer &out) const
 
 Task::Task(Project *project, std::string name)
 	:mProject(project), mName(name), mType(NULL),
-	mState(NULL), mClosed(false)
+	mState(NULL), mClosed(false), mId(-1)
 {
 }
 
@@ -626,6 +626,22 @@ Task::~Task()
 	for(auto event : mEvents) {
 		delete event;
 	}
+}
+
+void Task::setId(unsigned int id)
+{
+	if(mId != -1) {
+		throw "Id already set";
+	}
+	mId = id;
+}
+
+int Task::getId() const
+{
+	if(mId == -1) {
+		throw "No id";
+	}
+	return mId;
 }
 
 void Task::setName(std::string newName)
@@ -1141,6 +1157,7 @@ TaskList::~TaskList()
 
 void TaskList::addTask(Task *task)
 {
+	task->setId(mTasks.size());
 	mTasks.push_back(task);
 }
 
@@ -1148,6 +1165,14 @@ void TaskList::removeTask(Task *task)
 {
 	mTasks.erase(std::remove(mTasks.begin(), mTasks.end(), task),
 		mTasks.end());
+}
+
+Task *TaskList::getTask(unsigned int id)
+{
+	if(id >= mTasks.size()) {
+		return NULL;
+	}
+	return mTasks[id];
 }
 
 const std::vector<Task*> TaskList::all() const
