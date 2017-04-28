@@ -1336,6 +1336,10 @@ Project::~Project()
 	for(const auto &entry : mTypes) {
 		delete entry.second;
 	}
+
+	for(const auto &user : mUsers) {
+		delete user.second;
+	}
 }
 
 TaskType *Project::getType(std::string name)
@@ -1539,6 +1543,9 @@ Config::~Config()
 {
 	for(auto repo : mRepositories) {
 		delete repo;
+	}
+	if(mDefaultUser) {
+		delete mDefaultUser;
 	}
 }
 
