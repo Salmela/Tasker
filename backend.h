@@ -21,13 +21,17 @@ public:
 	static User *ANONYMOUS;
 
 	User(std::string name) :mName(name) {};
-	std::string getName() {return mName;};
-	std::string getEmail() {return mEmail;};
+	std::string getName() const;
+	std::string getEmail() const;
+
+	static User *read(FJson::Reader &in);
+	void write(FJson::Writer &out) const;
 private:
 	std::string mName;
 	std::string mEmail;
 	std::vector<std::string> mNickNames;
 	static User ANONYMOUS_VALUE;
+	FJson::TokenCache mForeignKeys;
 };
 
 class TaskState
@@ -300,7 +304,7 @@ public:
 
 	Project(); //< open for tests
 	~Project();
-	User *getMyUser();
+	User *getDefaultUser();
 	User *getUser(std::string name);
 	TaskType *getType(std::string name);
 	TaskList *getTaskList();
@@ -310,7 +314,7 @@ public:
 
 	void write();//< TODO make private
 private:
-	User *mMyUser;
+	User *mDefaultUser;
 	std::string mDirname;
 	std::string mTaskFile;
 	std::map<std::string, TaskType*> mTypes;
@@ -332,6 +336,7 @@ private:
 class Config//< TODO this object should be thread safe
 {
 public:
+	static User *getDefaultUser();
 	static std::string getTaskerData(std::string path, std::string *source = NULL);
 	static void setTaskerData(std::string path, std::string source);
 private:
@@ -345,6 +350,7 @@ private:
 	};
 	FJson::TokenCache mForeignKeys;
 	std::vector<Repository*> mRepositories;
+	User *mDefaultUser;
 
 	void readHomeConfig();
 	void readRepository(FJson::Reader &in);

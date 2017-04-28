@@ -47,8 +47,48 @@ std::vector<std::string> split(const std::string &str, char delim) {
 	return elements;
 }
 
+/// User
+
 User User::ANONYMOUS_VALUE("anonymous");
 User *User::ANONYMOUS = &User::ANONYMOUS_VALUE;
+
+std::string User::getName() const
+{
+	return mName;
+}
+
+std::string User::getEmail() const
+{
+	return mEmail;
+}
+
+User *User::read(FJson::Reader &in)
+{
+	User *user = new User("");
+	std::string key;
+	in.startObject();
+	while(in.readObjectKey(key)) {
+		if(key == "name") {
+			in.read(user->mName);
+		} else if(key == "email") {
+			in.read(user->mEmail);
+		} else {
+			in.skipValue(&user->mForeignKeys);
+		}
+	}
+	return user;
+}
+
+void User::write(FJson::Writer &out) const
+{
+	out.startObject();
+	out.writeObjectKey("name");
+	out.write(mName);
+	out.writeObjectKey("email");
+	out.write(mEmail);
+	out.write(mForeignKeys);
+	out.endObject();
+}
 
 /// TaskState
 TaskState::TaskState(TaskType *type, std::string name)
@@ -705,7 +745,7 @@ const std::vector<Task*> Task::getSubTasks() const
 
 void Task::addEvent(TaskEvent *event)
 {
-	event->setUser(mProject->getMyUser());
+	event->setUser(mProject->getDefaultUser());
 	mEvents.push_back(event);
 }
 
@@ -1227,7 +1267,7 @@ Project *Project::open(std::string dirname)
 }
 
 Project::Project()
-	:mMyUser(NULL), mSrcStorage(NULL), mTaskStorage(NULL)
+	:mDefaultUser(NULL), mSrcStorage(NULL), mTaskStorage(NULL)
 {
 }
 
@@ -1247,12 +1287,12 @@ TaskType *Project::getType(std::string name)
 	return (iter != mTypes.end()) ? iter->second : NULL;
 }
 
-User *Project::getMyUser()
+User *Project::getDefaultUser()
 {
-	if(!mMyUser) {
-		return User::ANONYMOUS;
+	if(!mDefaultUser) {
+		return Config::getDefaultUser();
 	}
-	return mMyUser;
+	return mDefaultUser;
 }
 
 User *Project::getUser(std::string name)
@@ -1432,17 +1472,29 @@ void Project::writeText(FJson::Writer &out, std::string text)
 
 Config Config::mConfig;
 
-Config::Config() {
+Config::Config()
+	:mDefaultUser(NULL)
+{
 	this->readHomeConfig();
 }
 
-Config::~Config() {
+Config::~Config()
+{
 	for(auto repo : mRepositories) {
 		delete repo;
 	}
 }
 
-static bool startsWith(std::string &prefix, std::string &value) {
+User *Config::getDefaultUser()
+{
+	if(!Config::mConfig.mDefaultUser) {
+		return User::ANONYMOUS;
+	}
+	return Config::mConfig.mDefaultUser;
+}
+
+static bool startsWith(std::string &prefix, std::string &value)
+{
 	if(value.size() < prefix.size()) return false;
 	return std::equal(prefix.begin(), prefix.end(), value.begin());
 }
@@ -1498,6 +1550,8 @@ void Config::readHomeConfig() {
 	while(in.readObjectKey(key)) {
 		if(key == "repositories") {
 			readRepository(in);
+		} else if(key == "default-user") {
+			mDefaultUser = User::read(in);
 		} else {
 			in.skipValue(&Config::mConfig.mForeignKeys);
 		}
