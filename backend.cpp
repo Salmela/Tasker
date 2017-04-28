@@ -163,18 +163,22 @@ TaskState *TaskState::read(TaskType *type, FJson::Reader &in)
 {
 	std::string name, key;
 	unsigned int id = TaskState::INVALID_ID;
+	FJson::TokenCache foreignKeys;
 	in.startObject();
 	while(in.readObjectKey(key)) {
 		if(key == "name") {
 			in.read(name);
 		} else if(key == "id") {
 			in.read(id);
+		} else {
+			in.skipValue(&foreignKeys);
 		}
 	}
 	if(id == TaskState::INVALID_ID || name.empty()) {
 		throw "id and name must be set in TaskState json object.";
 	}
 	auto state = new TaskState(type, name, id);
+	state->mForeignKeys = foreignKeys;
 	return state;
 }
 
@@ -185,6 +189,7 @@ void TaskState::write(FJson::Writer &out) const
 	out.write(mName);
 	out.writeObjectKey("id");
 	out.write(mId);
+	out.write(mForeignKeys);
 	out.endObject();
 }
 
@@ -408,6 +413,7 @@ void TaskType::write(FJson::Writer &out) const
 	}
 	out.endArray();
 
+	out.write(mForeignKeys);
 	out.endObject();
 }
 
@@ -546,6 +552,7 @@ void TaskEvent::write(FJson::Writer &out) const
 	}
 
 	writeEvent(out);
+	out.write(mForeignKeys);
 	out.endObject();
 }
 

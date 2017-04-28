@@ -59,6 +59,7 @@ private:
 	unsigned int mId;
 	int mRefCount;
 	bool mIsDeleted;
+	FJson::TokenCache mForeignKeys;
 };
 
 class TaskType
