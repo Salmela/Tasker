@@ -448,6 +448,12 @@ Date::Date(std::string date)
 	strptime(date.c_str(), "%Y-%m-%dT%H:%M:%SZ", mTime);
 }
 
+Date::Date(const Date &date)
+{
+	mTime = new struct tm;
+	*mTime = *date.mTime;
+}
+
 Date::Date()
 {
 	time_t t = time(NULL);
@@ -473,6 +479,31 @@ std::string Date::getFormattedTime(std::string format) const
 	time_t val = mktime(mTime);
 	strftime(buffer, 80, format.c_str(), localtime(&val));
 	return buffer;
+}
+
+int Date::cmp(const Date &other) const
+{
+	int delta = mTime->tm_year - other.mTime->tm_year;
+	if(delta != 0) {
+		return delta;
+	}
+	delta = mTime->tm_mon - other.mTime->tm_mon;
+	if(delta != 0) {
+		return delta;
+	}
+	delta = mTime->tm_mday - other.mTime->tm_mday;
+	if(delta != 0) {
+		return delta;
+	}
+	delta = mTime->tm_hour - other.mTime->tm_hour;
+	if(delta != 0) {
+		return delta;
+	}
+	delta = mTime->tm_min - other.mTime->tm_min;
+	if(delta != 0) {
+		return delta;
+	}
+	return mTime->tm_sec - other.mTime->tm_sec;
 }
 
 Date &Date::operator=(const Date &other)

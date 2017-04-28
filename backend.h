@@ -101,12 +101,20 @@ class Date
 {
 public:
 	Date(std::string date);
+	Date(const Date &date);
 	Date();
 	~Date();
 
 	std::string getMachineTime() const;
 	std::string getFormattedTime(std::string format) const;
+	int cmp(const Date &other) const;
 	Date &operator=(const Date &other);
+	bool operator==(const Date &other) {return cmp(other) == 0;};
+	bool operator!=(const Date &other) {return cmp(other) != 0;};
+	bool operator<(const Date &other) {return cmp(other) < 0;};
+	bool operator>(const Date &other) {return cmp(other) > 0;};
+	bool operator<=(const Date &other) {return cmp(other) <= 0;};
+	bool operator>=(const Date &other) {return cmp(other) >= 0;};
 private:
 	struct tm *mTime;//TODO smart pointer?
 };
