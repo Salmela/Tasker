@@ -587,9 +587,9 @@ void TaskEvent::write(FJson::Writer &out) const
 	out.endObject();
 }
 
-const Date *TaskEvent::getCreationTime() const
+const Date &TaskEvent::getCreationDate() const
 {
-	return &mDate;
+	return mDate;
 }
 
 void TaskEvent::setUser(User *user)
@@ -714,6 +714,11 @@ void Task::setId(unsigned int id)
 	mId = id;
 }
 
+const Date &Task::getCreationDate() const
+{
+	return mCreationDate;
+}
+
 int Task::getId() const
 {
 	if(mId == -1) {
@@ -815,6 +820,7 @@ Task *Task::read(Project *project, FJson::Reader &in)
 
 	in.startObject();
 	std::string key;
+	Date creation("2000-01-01T00:00:00Z");
 
 	while(in.readObjectKey(key)) {
 		if(key == "name") {
@@ -831,6 +837,10 @@ Task *Task::read(Project *project, FJson::Reader &in)
 			std::string name;
 			in.read(name);
 			task->mAssigned = project->getUser(name);
+		} else if(key == "creation-time") {
+			std::string time;
+			in.read(time);
+			creation = Date(time);
 		} else if(key == "closed") {
 			in.read(task->mClosed);
 		} else if(key == "events") {
@@ -844,6 +854,7 @@ Task *Task::read(Project *project, FJson::Reader &in)
 		}
 	}
 	task->mState = task->mType->getStateById(state);
+	task->mCreationDate = creation;
 	for(auto event : task->mEvents) {
 		event->setTask(task);
 	}
@@ -856,11 +867,13 @@ void Task::write(FJson::Writer &out) const
 	out.writeObjectKey("name");
 	out.write(mName);
 	out.writeObjectKey("desc");
-
 	Project::writeText(out, mDesc);
 
 	out.writeObjectKey("type");
 	out.write(mType->getName());
+	out.writeObjectKey("creation-time");
+	out.write(mCreationDate.getMachineTime());
+
 	if(mAssigned != User::ANONYMOUS) {
 		out.writeObjectKey("assigned");
 		out.write(mAssigned->getName());

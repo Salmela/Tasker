@@ -232,7 +232,18 @@ void TaskListView::render(CliInterface *parent)
 		std::cout << "  [Empty]\n";
 	}
 
+	auto sort = [](const Backend::Task *first, const Backend::Task *second) {
+		Backend::Date firstDate = first->getCreationDate();
+		Backend::Date secondDate = second->getCreationDate();
+		if(!first->getEvents().empty())
+			firstDate = first->getEvents().back()->getCreationDate();
+		if(!second->getEvents().empty())
+			secondDate = second->getEvents().back()->getCreationDate();
+		return firstDate > secondDate;
+	};
+
 	auto taskList = mList->getFiltered(mFilter);
+	std::sort(taskList.begin(), taskList.end(), sort);
 	for (Backend::Task *t : taskList) {
 		std::cout << " #" << t->getId() << " " << t->getName() << "\n";
 	}
@@ -385,7 +396,7 @@ void TaskView::render(CliInterface *parent)
 		auto *comment = dynamic_cast<Backend::CommentEvent*>(event);
 		auto *stateChange = dynamic_cast<Backend::StateChangeEvent*>(event);
 
-		std::cout << event->getCreationTime()->getFormattedTime("%d.%m.%Y")
+		std::cout << event->getCreationDate().getFormattedTime("%d.%m.%Y")
 		          << " by " << event->getUser()->getName() << "\n";
 		if(comment) {
 			std::cout << comment->getContent();

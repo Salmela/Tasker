@@ -128,7 +128,7 @@ public:
 	virtual ~TaskEvent();
 	static TaskEvent *read(Project *project, FJson::Reader &in);
 	void write(FJson::Writer &out) const;
-	const Date *getCreationTime() const;
+	const Date &getCreationDate() const;
 	void setUser(User *user);
 	User *getUser() const;
 	void setTask(Task *task);
@@ -212,6 +212,7 @@ public:
 	User *getAssigned() const;
 	TaskType *getType() const;
 	TaskState *getState() const;
+	const Date &getCreationDate() const;
 	int getId() const;
 
 	void addSubTask(Task *task);
@@ -231,6 +232,7 @@ private:
 	User *mAssigned;
 	TaskType *mType;
 	TaskState *mState;
+	Date mCreationDate;
 	bool mClosed;
 	int mId;
 	FJson::TokenCache mForeignKeys;
