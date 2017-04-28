@@ -37,6 +37,9 @@ bool dateTest() {
 	res &= d2 > d;
 	res &= d != d2;
 
+	Backend::Date d3("2017-01-01T00:00:00Z");
+	res &= d3.getMachineTime() == "2017-01-01T00:00:00Z";
+
 	return res;
 }
 

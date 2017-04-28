@@ -469,7 +469,7 @@ Date::~Date()
 std::string Date::getMachineTime() const
 {
 	char buffer[24];
-	strftime(buffer, 24, "%G-%m-%dT%H:%M:%SZ", mTime);
+	strftime(buffer, 24, "%Y-%m-%dT%H:%M:%SZ", mTime);
 	return buffer;
 }
 
