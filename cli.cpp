@@ -372,7 +372,8 @@ void TaskView::render(CliInterface *parent)
 	for(unsigned int i = 0; i < name.size(); i++) {
 		std::cout << "=";
 	}
-	std::cout << "\n[" << mTask->getState()->getName() << "]\n";
+	std::cout << "\n[" << mTask->getState()->getName() << "], created at "
+		<< mTask->getCreationDate().getFormattedTime("%d.%m.%Y %H:%M:%S") << "\n";
 	if(mTask->getAssigned()) {
 		std::cout << "assigned to: " << mTask->getAssigned()->getName() << "\n";
 	}

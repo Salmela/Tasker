@@ -32,7 +32,7 @@ bool dateTest() {
 
 	res &= d.getFormattedTime("Year %Y") == "Year 2017";
 
-	Backend::Date d2("2017-05-23T14:51:00Z");
+	Backend::Date d2("2017-05-16T14:51:00Z");
 	res &= d < d2;
 	res &= d2 > d;
 	res &= d != d2;
