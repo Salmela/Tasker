@@ -116,9 +116,14 @@ bool Main::init(int argc, char **argv)
 {
 	char *cwd_tmp = get_current_dir_name();
 	std::string cwd = cwd_tmp;
+	std::string dir = Backend::Config::guessProjectDir(cwd);
 	free(cwd_tmp);
 
-	mProject = Backend::Project::open(cwd);
+	if(argc >= 2) {
+		dir = argv[1];
+	}
+
+	mProject = Backend::Project::open(dir);
 	if(mProject) {
 		return true;
 	}
@@ -366,7 +371,13 @@ TaskView::TaskView(Backend::Task *task)
 void TaskView::render(CliInterface *parent)
 {
 	std::ostringstream stream;
-	stream << "#" << mTask->getId() << " " << mTask->getName();
+	if(mTask->getParentTask()) {
+		stream << "#" << mTask->getParentTask()->getId() << "." << mTask->getId()
+			<< " " << mTask->getName();
+	} else {
+		stream << "#" << mTask->getId()
+			<< " " << mTask->getName();
+	}
 	std::string name = stream.str();
 	std::cout << name << "\n";
 	for(unsigned int i = 0; i < name.size(); i++) {
@@ -421,6 +432,18 @@ void TaskView::render(CliInterface *parent)
 		parent->quit();
 	} else if(command == "n" || command == "new") {
 		parent->newView(new CreateTaskView(mTask));
+	} else if(command == "o" || command == "open") {
+		int taskIndex;
+		std::istringstream iss(args[0]);
+		iss >> taskIndex;
+
+		taskIndex--;
+		if (taskIndex < 0 || (unsigned)taskIndex >= mTask->getSubTasks().size()) {
+			std::cerr << "Task index is out-of-bounds.\n";
+			return;
+		}
+		Backend::Task *task = mTask->getSubTasks()[taskIndex];
+		parent->newView(new TaskView(task));
 	} else if(command == "a" || command == "assign") {
 		mTask->setAssigned(parent->getProject()->getDefaultUser());
 	} else if(command == "c" || command == "comment") {

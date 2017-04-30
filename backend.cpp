@@ -694,13 +694,17 @@ void CommitEvent::writeEvent(FJson::Writer &out) const
 /// Task
 
 Task::Task(Project *project, std::string name)
-	:mProject(project), mName(name), mAssigned(User::ANONYMOUS),
-	mType(NULL), mState(NULL), mClosed(false), mId(-1)
+	:mProject(project), mId(-1), mName(name),
+	mAssigned(User::ANONYMOUS), mType(NULL), mState(NULL),
+	mParent(NULL)
 {
 }
 
 Task::~Task()
 {
+	for(auto task : mSubTasks) {
+		delete task;
+	}
 	for(auto event : mEvents) {
 		delete event;
 	}
@@ -714,16 +718,8 @@ void Task::setId(unsigned int id)
 	mId = id;
 }
 
-const Date &Task::getCreationDate() const
-{
-	return mCreationDate;
-}
-
 int Task::getId() const
 {
-	if(mId == -1) {
-		throw "No id";
-	}
 	return mId;
 }
 
@@ -787,9 +783,25 @@ TaskState *Task::getState() const
 	return mState;
 }
 
+const Date &Task::getCreationDate() const
+{
+	return mCreationDate;
+}
+
+Task *Task::getParentTask() const
+{
+	return mParent;
+}
+
 void Task::addSubTask(Task *task)
 {
+	if(task->getId() == -1) {
+		task->setId(mSubTasks.size() + 1);
+	} else if((unsigned)task->getId() != mSubTasks.size() + 1) {
+		throw "Unexpected sub task id.";
+	}
 	mSubTasks.push_back(task);
+	task->mParent = this;
 }
 
 const std::vector<Task*> Task::getSubTasks() const
@@ -816,14 +828,16 @@ bool Task::isClosed() const
 Task *Task::read(Project *project, FJson::Reader &in)
 {
 	auto *task = new Task(project, "");
-	int state;
+	int state = -1;
 
 	in.startObject();
 	std::string key;
 	Date creation("2000-01-01T00:00:00Z");
 
 	while(in.readObjectKey(key)) {
-		if(key == "name") {
+		if(key == "id") {
+			in.read(task->mId);
+		} else if(key == "name") {
 			in.read(task->mName);
 		} else if(key == "desc") {
 			task->mDesc = Project::readText(in);
@@ -841,8 +855,11 @@ Task *Task::read(Project *project, FJson::Reader &in)
 			std::string time;
 			in.read(time);
 			creation = Date(time);
-		} else if(key == "closed") {
-			in.read(task->mClosed);
+		} else if(key == "sub-tasks") {
+			in.startArray();
+			while(in.hasNextElement()) {
+				task->addSubTask(Task::read(project, in));
+			}
 		} else if(key == "events") {
 			in.startArray();
 			while(in.hasNextElement()) {
@@ -853,7 +870,11 @@ Task *Task::read(Project *project, FJson::Reader &in)
 			in.skipValue(&task->mForeignKeys);
 		}
 	}
-	task->mState = task->mType->getStateById(state);
+	if(state != -1) {
+		task->mState = task->mType->getStateById(state);
+	} else {
+		task->mState = task->mType->getStartState();
+	}
 	task->mCreationDate = creation;
 	for(auto event : task->mEvents) {
 		event->setTask(task);
@@ -864,6 +885,8 @@ Task *Task::read(Project *project, FJson::Reader &in)
 void Task::write(FJson::Writer &out) const
 {
 	out.startObject();
+	out.writeObjectKey("id");
+	out.write(mId);
 	out.writeObjectKey("name");
 	out.write(mName);
 	out.writeObjectKey("desc");
@@ -879,9 +902,14 @@ void Task::write(FJson::Writer &out) const
 		out.write(mAssigned->getName());
 	}
 	out.writeObjectKey("state");
-	out.write(mState->getId());
-	out.writeObjectKey("closed");
-	out.write(mClosed);
+	out.write(mId);
+	out.writeObjectKey("sub-tasks");
+	out.startArray();
+	for(auto task : mSubTasks) {
+		out.startNextElement();
+		task->write(out);
+	}
+	out.endArray();
 	out.writeObjectKey("events");
 	out.startArray();
 	for(auto event : mEvents) {
@@ -1267,7 +1295,9 @@ TaskList::~TaskList()
 
 void TaskList::addTask(Task *task)
 {
-	task->setId(mTasks.size());
+	if(task->getId() == -1) {
+		task->setId(mTasks.size() + 1);
+	}
 	mTasks.push_back(task);
 }
 
@@ -1279,6 +1309,7 @@ void TaskList::removeTask(Task *task)
 
 Task *TaskList::getTask(unsigned int id)
 {
+	id--;
 	if(id >= mTasks.size()) {
 		return NULL;
 	}
@@ -1316,15 +1347,12 @@ Project *Project::create(std::string dirname)
 Project *Project::open(std::string dirname)
 {
 	auto project = new Project();
-	std::string source;
-	project->mDirname = Config::getTaskerData(dirname, &source);
-	if(project->mDirname.empty()) {
-		project->mDirname = dirname;
-	}
-	project->mTaskStorage = GitBackend::open(project->mDirname);
+	project->mDirname = dirname;
+	project->mTaskStorage = GitBackend::open(dirname);
 	if(!project->mTaskStorage) {
 		throw "Failed to open task storage";
 	}
+	std::string source = Config::getSourceDir(dirname);
 	if(!source.empty()) {
 		project->mSrcStorage = GitBackend::open(source);
 	}
@@ -1574,6 +1602,26 @@ static bool startsWith(std::string &prefix, std::string &value)
 {
 	if(value.size() < prefix.size()) return false;
 	return std::equal(prefix.begin(), prefix.end(), value.begin());
+}
+
+std::string Config::getSourceDir(std::string taskerPath)
+{
+	for(auto *repository : Config::mConfig.mRepositories) {
+		if(repository->data == taskerPath) {
+			return repository->source;
+		}
+	}
+	return "";
+}
+
+std::string Config::guessProjectDir(std::string currentWorkDir)
+{
+	std::string dir;
+	dir = Config::getTaskerData(currentWorkDir, NULL);
+	if(dir.empty()) {
+		dir = currentWorkDir;
+	}
+	return dir;
 }
 
 std::string Config::getTaskerData(std::string path, std::string *source)

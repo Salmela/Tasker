@@ -200,20 +200,21 @@ public:
 	Task(Project *project, std::string name);
 	~Task();
 
+	void setId(unsigned int id);
 	void setName(std::string name);
 	void setDescription(std::string text);
 	void setAssigned(User *user);
 	void setType(TaskType *type);
 	bool setState(TaskState *state);
-	void setId(unsigned int id);
 
+	int getId() const;
 	std::string getName() const;
 	std::string getDescription() const;
 	User *getAssigned() const;
 	TaskType *getType() const;
 	TaskState *getState() const;
 	const Date &getCreationDate() const;
-	int getId() const;
+	Task *getParentTask() const;
 
 	void addSubTask(Task *task);
 	const std::vector<Task*> getSubTasks() const;
@@ -227,14 +228,14 @@ public:
 
 private:
 	Project *mProject;
+	int mId;
 	std::string mName;
 	std::string mDesc;
 	User *mAssigned;
 	TaskType *mType;
 	TaskState *mState;
 	Date mCreationDate;
-	bool mClosed;
-	int mId;
+	Task *mParent;
 	FJson::TokenCache mForeignKeys;
 
 	std::vector<TaskEvent*> mEvents;
@@ -351,6 +352,8 @@ class Config//< TODO this object should be thread safe
 {
 public:
 	static User *getDefaultUser();
+	static std::string guessProjectDir(std::string currentWorkDir);
+	static std::string getSourceDir(std::string taskerPath);
 	static std::string getTaskerData(std::string path, std::string *source = NULL);
 	static void setTaskerData(std::string path, std::string source);
 private:
