@@ -45,4 +45,4 @@ TODO
 
 Currently the code uses handmade git and json handling code, but
 it would be better to use proper json library and c++ wrapper for
-libgit2.
+libgit2. Also proper unit testing framework is needed.

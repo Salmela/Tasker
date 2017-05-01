@@ -23,7 +23,7 @@ fjson-example: fjson/example.o $(FJSON_OBJECTS)
 	$(CXX) $(LDFLAGS) fjson/example.o $(FJSON_OBJECTS) -o $@
 
 tasker: cli.o $(OBJECTS)
-	$(CXX) $(LDFLAGS) cli.o $(OBJECTS) -lgit2 -o $@
+	$(CXX) $(LDFLAGS) cli.o $(OBJECTS) -lgit2 -lreadline -o $@
 
 clean:
 	rm -f test tasker *.o *.d fjson/*.o fjson/*.d

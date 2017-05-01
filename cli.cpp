@@ -25,6 +25,8 @@
 #include <string>
 #include <exception>
 #include <unistd.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #include "backend.h"
 #include "cli.h"
@@ -103,6 +105,9 @@ static std::string trim(const std::string &str)
 Main::Main()
 	:mListView()
 {
+#ifdef _READLINE_H_
+	rl_initialize();
+#endif
 	newView(&mListView);
 }
 
@@ -149,10 +154,16 @@ bool Main::init(int argc, char **argv)
 
 void Main::readline(std::string cmd, std::string &command, std::vector<std::string> &args)
 {
-	std::cout << cmd << " ";
-
 	std::string line;
+#ifdef _READLINE_H_
+	line = std::string(::readline((cmd + " ").c_str()));
+	if(!line.empty()) {
+		add_history(line.c_str());
+	}
+#else
+	std::cout << cmd << " ";
 	std::getline(std::cin, line);
+#endif
 	std::istringstream iss(line);
 
 	iss >> command;
@@ -267,7 +278,7 @@ void TaskListView::render(CliInterface *parent)
 		mShowView = false;
 	}
 
-	Main::readline("Command>", command, args);
+	Main::readline("TaskList>", command, args);
 
 	if (command == "o" || command == "open") {
 		int taskIndex;
@@ -280,6 +291,7 @@ void TaskListView::render(CliInterface *parent)
 			return;
 		}
 		parent->newView(new TaskView(task));
+		mShowView = true;
 	} else if (command == "n" || command == "new") {
 		parent->newView(new CreateTaskView());
 	} else if (command == "ls" || command == "list") {
@@ -308,6 +320,8 @@ void TaskListView::render(CliInterface *parent)
 		parent->getProject()->write();
 	} else if (command == "q" || command == "quit") {
 		parent->deleteView(this);
+	} else {
+		std::cerr << "Unknown command '" << command << "'.\n";
 	}
 }
 
@@ -450,7 +464,7 @@ void TaskView::render(CliInterface *parent)
 	std::string command;
 	std::vector<std::string> args;
 
-	Main::readline("Command>", command, args);
+	Main::readline("Task>", command, args);
 
 	if(command == "e" || command == "exit") {
 		parent->deleteView(this);
@@ -503,6 +517,8 @@ void TaskView::render(CliInterface *parent)
 		//Change description
 		std::string text = openEditor(mTask->getDescription());
 		mTask->setDescription(trim(text));
+	} else {
+		std::cerr << "Unknown command '" << command << "'.\n";
 	}
 }
 
