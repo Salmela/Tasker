@@ -1044,7 +1044,7 @@ std::string Search::parseString(std::istream &stream)
 {
 	int val = stream.get();
 	if(val != '"') {
-		throw "Expected quote";
+		throw SearchException("Expected quote");
 	}
 
 	std::ostringstream ostream;
@@ -1058,7 +1058,7 @@ std::string Search::parseString(std::istream &stream)
 			} else if(val == '\\') {
 				ostream.put('\\');
 			} else {
-				throw "Invalid escape sequence";
+				throw SearchException("Invalid escape sequence");
 			}
 			continue;
 		} else if(val == '"') {
@@ -1068,7 +1068,7 @@ std::string Search::parseString(std::istream &stream)
 	}
 
 	if(val != '"') {
-		throw "Expected quote";
+		throw SearchException("Expected quote");
 	}
 	return ostream.str();
 }
@@ -1087,7 +1087,7 @@ TaskFilter *Search::readTerm(std::istream &stream)
 			if(strcmp(buf, "open") == 0) {
 				filter = TaskFilter::isOpen(true);
 			} else {
-				throw "Unknown is keyword";
+				throw SearchException("Unknown is keyword");
 			}
 			break;
 		case 'c':
@@ -1095,28 +1095,27 @@ TaskFilter *Search::readTerm(std::istream &stream)
 			if(strcmp(buf, "closed") == 0) {
 				filter = TaskFilter::isOpen(false);
 			} else {
-				throw "Unknown is keyword";
+				throw SearchException("Unknown is keyword");
 			}
 			break;
 		case 's':
 			stream.get(buf + 1, 5);
 			if(strcmp(buf, "state") == 0) {
 				if(stream.get() != '(') {
-					throw "Expected '('";
+					throw SearchException("Expected '('");
 				}
 				std::string str = Search::parseString(stream);
 				filter = TaskFilter::hasState(str);
 				if(stream.get() != ')') {
-					throw "Expected ')'";
+					throw SearchException("Expected ')'");
 				}
 			}
 			break;
 		default:
-			throw "Unknown keyword";
-			break;
+			throw SearchException("Unknown keyword");
 	}
 	if(!filter) {
-		throw "inalid state";
+		throw SearchException("inalid state");
 	}
 	return filter;
 }
@@ -1132,7 +1131,7 @@ void Search::processStack(Data *data, char nextOperator)
 	precedence[')'] = 5;
 	precedence['\0'] = 6;
 
-	// TODO WIP improve error handling!
+	// TODO WIP improve error reporting!
 
 	if(data->mOpStack.empty()) {
 		data->mOpStack.push_back(nextOperator);
@@ -1165,7 +1164,7 @@ void Search::processStack(Data *data, char nextOperator)
 				filter = TaskFilter::andOf(a, b);
 				break;
 			default:
-				throw "invalid operation";
+				throw SearchException("invalid operation");
 				break;
 		}
 		if(!filter) {
@@ -1180,7 +1179,7 @@ void Search::processStack(Data *data, char nextOperator)
 	}
 	if(nextOperator == ')') {
 		if(data->mOpStack.back() != '(') {
-			throw "Mismatched parenthesis\n";
+			throw SearchException("Mismatched parenthesis\n");
 		}
 		data->mOpStack.pop_back();
 		return;
@@ -1274,11 +1273,11 @@ TaskFilter *Search::create(std::string query)
 
 	if(data.mValueStack.size() != 1) {
 		std::cerr << "Too many values in stack\n";
-		throw "";
+		throw "";//internal exception
 	}
 	if(!data.mOpStack.empty()) {
 		std::cerr << "Unprocessed operators left\n";
-		throw "";
+		throw "";//internal exception
 	}
 
 	return data.mValueStack[0];

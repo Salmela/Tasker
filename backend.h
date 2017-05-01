@@ -281,6 +281,19 @@ private:
 	std::string mState;
 };
 
+class SearchException : public std::exception {
+public:
+	SearchException(std::string msg) {mMessage = msg.c_str();};
+	SearchException(const char *msg) {mMessage = msg;};
+
+	const char *what() const throw() {
+		return mMessage;
+	}
+private:
+	const char *mMessage;
+};
+
+
 class Search
 {
 public:
