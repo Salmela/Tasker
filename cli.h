@@ -38,8 +38,10 @@ class TaskView : public View
 public:
 	TaskView(Backend::Task *task);
 	void render(CliInterface *parent) override;
+	void view(CliInterface *parent);
 private:
 	Backend::Task *mTask;
+	bool mShowView;
 };
 
 class CreateTaskView : public View
@@ -58,8 +60,10 @@ public:
 	~TaskListView();
 	void setFilter(Backend::TaskFilter *filter);
 	void render(CliInterface *parent) override;
+	void view(CliInterface *parent);
 private:
 	Backend::TaskFilter *mFilter;
+	bool mShowView;
 };
 
 class Main : public CliInterface

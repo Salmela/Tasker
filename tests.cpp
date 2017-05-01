@@ -341,19 +341,16 @@ bool taskEvents()
 	return res;
 }
 
-bool openProjectPerf()
+bool openTestProject()
 {
-	auto *project = Backend::Project::open("/home/me/sources/tasker");
+	auto *project = Backend::Project::open("resources/test1/");
 	bool res = project && project->getTaskList();
+	delete project;
 	return res;
 }
 
 int testMain()
 {
-//#define PERF
-#ifdef PERF
-	return !openProjectPerf();
-#else
 	bool success;
 
 	success = dateTest();
@@ -386,8 +383,10 @@ int testMain()
 
 	success = taskEvents();
 	std::cout << (success ? "Success" : "Failure") << "\n";
+
+	success = openTestProject();
+	std::cout << (success ? "Success" : "Failure") << "\n";
 	return 0;
-#endif
 }
 
 };

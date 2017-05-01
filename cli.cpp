@@ -215,6 +215,7 @@ void Main::quit()
 TaskListView::TaskListView()
 	:mFilter(Backend::TaskFilter::isOpen(true))
 {
+	mShowView = true;
 }
 
 TaskListView::~TaskListView()
@@ -228,7 +229,7 @@ void TaskListView::setFilter(Backend::TaskFilter *filter)
 	mFilter = filter;
 }
 
-void TaskListView::render(CliInterface *parent)
+void TaskListView::view(CliInterface *parent)
 {
 	auto *mList = parent->getProject()->getTaskList();
 	std::cout << "Task list:\n";
@@ -253,8 +254,18 @@ void TaskListView::render(CliInterface *parent)
 		std::cout << " #" << t->getId() << " " << t->getName() << "\n";
 	}
 
+}
+
+void TaskListView::render(CliInterface *parent)
+{
+	auto *mList = parent->getProject()->getTaskList();
 	std::string command;
 	std::vector<std::string> args;
+
+	if(mShowView) {
+		view(parent);
+		mShowView = false;
+	}
 
 	Main::readline("Command>", command, args);
 
@@ -271,6 +282,8 @@ void TaskListView::render(CliInterface *parent)
 		parent->newView(new TaskView(task));
 	} else if (command == "n" || command == "new") {
 		parent->newView(new CreateTaskView());
+	} else if (command == "ls" || command == "list") {
+		mShowView = true;
 	} else if (command == "s" || command == "search") {
 		std::ostringstream oss;
 		std::string separator = "";
@@ -281,7 +294,8 @@ void TaskListView::render(CliInterface *parent)
 		try {
 			auto *search = Backend::Search::create(oss.str());
 			setFilter(search);
-		} catch(...) {
+			mShowView = true;
+		} catch(Backend::SearchException e) {
 			std::cout << "Syntax error in search string\n";
 		}
 	} else if (command == "t" || command == "type") {
@@ -321,6 +335,9 @@ void ModifyTaskTypeView::render(CliInterface *parent)
 	} else {
 		std::cout << "Opening existing type '" << mName << "'\n";
 	}
+	std::cout << "\nTODO: The task types can't be modified from cli"
+		<< ", but you can manually edit the json file.\n\n";
+
 	parent->deleteView(this);
 }
 
@@ -366,9 +383,10 @@ void CreateTaskView::render(CliInterface *parent)
 TaskView::TaskView(Backend::Task *task)
 {
 	mTask = task;
+	mShowView = true;
 }
 
-void TaskView::render(CliInterface *parent)
+void TaskView::view(CliInterface *parent)
 {
 	std::ostringstream stream;
 	if(mTask->getParentTask()) {
@@ -420,6 +438,14 @@ void TaskView::render(CliInterface *parent)
 		}
 		std::cout << "\n";
 	}
+}
+
+void TaskView::render(CliInterface *parent)
+{
+	if(mShowView) {
+		view(parent);
+		mShowView = false;
+	}
 
 	std::string command;
 	std::vector<std::string> args;
@@ -432,6 +458,8 @@ void TaskView::render(CliInterface *parent)
 		parent->quit();
 	} else if(command == "n" || command == "new") {
 		parent->newView(new CreateTaskView(mTask));
+	} else if (command == "ls" || command == "list") {
+		mShowView = true;
 	} else if(command == "o" || command == "open") {
 		int taskIndex;
 		std::istringstream iss(args[0]);
@@ -444,6 +472,7 @@ void TaskView::render(CliInterface *parent)
 		}
 		Backend::Task *task = mTask->getSubTasks()[taskIndex];
 		parent->newView(new TaskView(task));
+		mShowView = true;
 	} else if(command == "a" || command == "assign") {
 		mTask->setAssigned(parent->getProject()->getDefaultUser());
 	} else if(command == "c" || command == "comment") {
