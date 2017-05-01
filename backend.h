@@ -299,13 +299,17 @@ class Search
 public:
 	static TaskFilter *create(std::string query);
 private:
+	Search(std::istream &stream) :mStream(stream) {};
 	struct Data {
 		std::vector<char> mOpStack;
 		std::vector<TaskFilter*> mValueStack;
 	};
-	static std::string parseString(std::istream &stream);
-	static TaskFilter *readTerm(std::istream &stream);
-	static void processStack(Data *data, char nextOperator);
+	TaskFilter *doQuery();
+	std::string parseString();
+	TaskFilter *readTerm();
+	void processStack(Data *data, char nextOperator);
+
+	std::istream &mStream;
 };
 
 class TaskList

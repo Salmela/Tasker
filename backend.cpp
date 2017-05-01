@@ -1040,17 +1040,17 @@ bool TaskFilter::TaskFilterWrapper::operator()(const Task *task)
 
 /// Search
 
-std::string Search::parseString(std::istream &stream)
+std::string Search::parseString()
 {
-	int val = stream.get();
+	int val = mStream.get();
 	if(val != '"') {
 		throw SearchException("Expected quote");
 	}
 
 	std::ostringstream ostream;
-	while((val = stream.get()) != -1) {
+	while((val = mStream.get()) != -1) {
 		if(val == '\\') {
-			val = stream.get();
+			val = mStream.get();
 			if(val == -1) {
 				break;
 			} else if(val == '"') {
@@ -1073,9 +1073,9 @@ std::string Search::parseString(std::istream &stream)
 	return ostream.str();
 }
 
-TaskFilter *Search::readTerm(std::istream &stream)
+TaskFilter *Search::readTerm()
 {
-	int val = stream.get();
+	int val = mStream.get();
 	char buf[256];
 	buf[0] = val;
 
@@ -1083,7 +1083,7 @@ TaskFilter *Search::readTerm(std::istream &stream)
 
 	switch(val) {
 		case 'o':
-			stream.get(buf + 1, 4);
+			mStream.get(buf + 1, 4);
 			if(strcmp(buf, "open") == 0) {
 				filter = TaskFilter::isOpen(true);
 			} else {
@@ -1091,7 +1091,7 @@ TaskFilter *Search::readTerm(std::istream &stream)
 			}
 			break;
 		case 'c':
-			stream.get(buf + 1, 6);
+			mStream.get(buf + 1, 6);
 			if(strcmp(buf, "closed") == 0) {
 				filter = TaskFilter::isOpen(false);
 			} else {
@@ -1099,14 +1099,14 @@ TaskFilter *Search::readTerm(std::istream &stream)
 			}
 			break;
 		case 's':
-			stream.get(buf + 1, 5);
+			mStream.get(buf + 1, 5);
 			if(strcmp(buf, "state") == 0) {
-				if(stream.get() != '(') {
+				if(mStream.get() != '(') {
 					throw SearchException("Expected '('");
 				}
-				std::string str = Search::parseString(stream);
+				std::string str = Search::parseString();
 				filter = TaskFilter::hasState(str);
-				if(stream.get() != ')') {
+				if(mStream.get() != ')') {
 					throw SearchException("Expected ')'");
 				}
 			}
@@ -1190,19 +1190,26 @@ void Search::processStack(Data *data, char nextOperator)
 TaskFilter *Search::create(std::string query)
 {
 	std::istringstream stream(query);
+	Search search(stream);
+
+	return search.doQuery();
+}
+
+TaskFilter *Search::doQuery()
+{
 	struct Data data;
 	int val;
 
 	std::vector<char> opStack;
 	std::vector<TaskFilter*> valueStack;
 
-	while((val = stream.get()) != -1) {
+	while((val = mStream.get()) != -1) {
 		char buf[4];
 		buf[0] = val;
 		switch(val) {
 			case '"': {
-				stream.unget();
-				std::string value = parseString(stream);
+				mStream.unget();
+				std::string value = parseString();
 				TaskFilter *filter = TaskFilter::search(value);
 				data.mValueStack.push_back(filter);
 			} break;
@@ -1221,49 +1228,49 @@ TaskFilter *Search::create(std::string query)
 				break;
 			case 'a':
 			case 'A':
-				stream.get(buf + 1, 3);
+				mStream.get(buf + 1, 3);
 				if(strcmp(buf, "and") == 0 ||
 				   strcmp(buf, "AND") == 0) {
 					processStack(&data, '&');
 					break;
 				}
-				stream.putback(buf[2]);
-				stream.putback(buf[1]);
-				stream.putback(buf[0]);
-				data.mValueStack.push_back(readTerm(stream));
+				mStream.putback(buf[2]);
+				mStream.putback(buf[1]);
+				mStream.putback(buf[0]);
+				data.mValueStack.push_back(readTerm());
 				break;
 			case 'o':
 			case 'O':
-				stream.get(buf + 1, 2);
+				mStream.get(buf + 1, 2);
 				if(strcmp(buf, "or") == 0 ||
 				   strcmp(buf, "OR") == 0) {
 					processStack(&data, '|');
 					break;
 				}
-				stream.putback(buf[1]);
-				stream.putback(buf[0]);
-				data.mValueStack.push_back(readTerm(stream));
+				mStream.putback(buf[1]);
+				mStream.putback(buf[0]);
+				data.mValueStack.push_back(readTerm());
 				break;
 			case 'n':
 			case 'N':
-				stream.get(buf + 1, 3);
+				mStream.get(buf + 1, 3);
 				if(strcmp(buf, "not") == 0 ||
 				   strcmp(buf, "NOT") == 0) {
 					data.mOpStack.push_back('!');
 					break;
 				}
-				stream.putback(buf[2]);
-				stream.putback(buf[1]);
-				stream.putback(buf[0]);
-				data.mValueStack.push_back(readTerm(stream));
+				mStream.putback(buf[2]);
+				mStream.putback(buf[1]);
+				mStream.putback(buf[0]);
+				data.mValueStack.push_back(readTerm());
 				break;
 			case ' ':
 				break;
 			case '\t':
 				break;
 			default:
-				stream.unget();
-				data.mValueStack.push_back(readTerm(stream));
+				mStream.unget();
+				data.mValueStack.push_back(readTerm());
 				break;
 		}
 	}
