@@ -20,6 +20,7 @@
 #include <cctype>
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <string>
@@ -108,6 +109,24 @@ Main::Main()
 #ifdef _READLINE_H_
 	rl_initialize();
 #endif
+	mColors = false;
+	if(getenv("LS_COLORS")) {
+		mColors = true;
+
+		NORMAL = "\e[m";
+		BOLD = "\e[1m";
+		UNDERLINE = "\e[4m";
+		INVERT = "\e[7m";
+		OVERLINE = "\e[9m";
+		RED = "\e[31m";
+		GREEN = "\e[32m";
+		BLUE = "\e[34m";
+		CYAN = "\e[36m";
+
+	} else {
+		NORMAL = BOLD = UNDERLINE = OVERLINE = "";
+		RED = GREEN = BLUE = CYAN = "";
+	}
 	newView(&mListView);
 }
 
@@ -173,6 +192,34 @@ void Main::readline(std::string cmd, std::string &command, std::vector<std::stri
 	while(iss >> arg) {
 		args.push_back(arg);
 	}
+}
+
+std::string Main::getText(TextClass klass, std::string text)
+{
+	std::ostringstream stream;
+	switch(klass) {
+		case TASK_ID:
+			stream << INVERT << BOLD << " " << text << " " << NORMAL;
+			break;
+		case TASK_NAME:
+			stream << UNDERLINE << BOLD << text << NORMAL;
+			break;
+		case TASK_STATE:
+		case TASK_STATE_CLOSED:
+			stream << ((klass == TASK_STATE) ? BLUE : GREEN);
+			stream << BOLD << "[" << text << "]\n" << NORMAL;
+			break;
+		case TASK_LIST_HEADER:
+			stream << BOLD << text << NORMAL;
+			break;
+		case SUB_TASK_HEADER:
+		case EVENT_HEADER:
+			stream << RED << text << NORMAL;
+			break;
+		default:
+			stream << text;
+	}
+	return stream.str();
 }
 
 void Main::newView(View *view)
@@ -243,10 +290,10 @@ void TaskListView::setFilter(Backend::TaskFilter *filter)
 void TaskListView::view(CliInterface *parent)
 {
 	auto *mList = parent->getProject()->getTaskList();
-	std::cout << "Task list:\n";
+	std::cout << parent->getText(TASK_LIST_HEADER, "Task list:\n");
 
 	if (mList->getSize() == 0) {
-		std::cout << "  [Empty]\n";
+		std::cout << "   [Empty]\n";
 	}
 
 	auto sort = [](const Backend::Task *first, const Backend::Task *second) {
@@ -262,7 +309,8 @@ void TaskListView::view(CliInterface *parent)
 	auto taskList = mList->getFiltered(mFilter);
 	std::sort(taskList.begin(), taskList.end(), sort);
 	for (Backend::Task *t : taskList) {
-		std::cout << " #" << t->getId() << " " << t->getName() << "\n";
+		std::string id = std::string(" #") + std::to_string(t->getId());
+		std::cout << std::setw(4) << id << " " << t->getName() << "\n";
 	}
 
 }
@@ -405,17 +453,25 @@ void TaskView::view(CliInterface *parent)
 	std::ostringstream stream;
 	if(mTask->getParentTask()) {
 		stream << "#" << mTask->getParentTask()->getId() << "." << mTask->getId()
-			<< " " << mTask->getName();
+			<< " ";
 	} else {
-		stream << "#" << mTask->getId()
-			<< " " << mTask->getName();
+		stream << "#" << mTask->getId();
 	}
-	std::string name = stream.str();
-	std::cout << name << "\n";
-	for(unsigned int i = 0; i < name.size(); i++) {
-		std::cout << "=";
+	if(parent->hasColor()) {
+		auto klass = mTask->isClosed() ? TASK_STATE_CLOSED : TASK_STATE;
+		std::cout << parent->getText(TASK_ID, stream.str());
+		std::cout << " " << parent->getText(TASK_NAME, mTask->getName());
+		std::cout << " " << parent->getText(klass, mTask->getState()->getName());
+	} else {
+		stream << " " << mTask->getName() << " [" << mTask->getState()->getName() + "]";
+		std::string name = stream.str();
+		std::cout << name << "\n";
+		for(unsigned int i = 0; i < name.size(); i++) {
+			std::cout << "=";
+		}
+		std::cout << "\n";
 	}
-	std::cout << "\n[" << mTask->getState()->getName() << "], created at "
+	std::cout << "Created at "
 		<< mTask->getCreationDate().getFormattedTime("%d.%m.%Y %H:%M:%S") << "\n";
 	if(mTask->getAssigned()) {
 		std::cout << "assigned to: " << mTask->getAssigned()->getName() << "\n";
@@ -425,7 +481,7 @@ void TaskView::view(CliInterface *parent)
 	auto subTasks = mTask->getSubTasks();
 
 	if(!subTasks.empty()) {
-		std::cout << "Sub-tasks:\n";
+		std::cout << parent->getText(SUB_TASK_HEADER, "Sub-tasks:\n");
 
 		unsigned int index = 1;
 		for(auto *task : subTasks) {
@@ -440,8 +496,10 @@ void TaskView::view(CliInterface *parent)
 		auto *comment = dynamic_cast<Backend::CommentEvent*>(event);
 		auto *stateChange = dynamic_cast<Backend::StateChangeEvent*>(event);
 
-		std::cout << event->getCreationDate().getFormattedTime("%d.%m.%Y")
+		std::ostringstream header;
+		header << event->getCreationDate().getFormattedTime("%d.%m.%Y")
 		          << " by " << event->getUser()->getName() << "\n";
+		std::cout << parent->getText(EVENT_HEADER, header.str());
 		if(comment) {
 			std::cout << comment->getContent();
 		} else if(stateChange) {

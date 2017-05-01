@@ -8,6 +8,16 @@ static std::string trim(const std::string &str);
 
 class View;
 
+enum TextClass {
+	TASK_ID,
+	TASK_NAME,
+	TASK_STATE,
+	TASK_STATE_CLOSED,
+	TASK_LIST_HEADER,
+	SUB_TASK_HEADER,
+	EVENT_HEADER,
+};
+
 class CliInterface {
 public:
 	virtual void newView(View *view) = 0;
@@ -15,6 +25,8 @@ public:
 	virtual void deleteView(View *view) = 0;
 	virtual Backend::Project *getProject() = 0;
 	virtual void quit() = 0;
+	virtual bool hasColor() = 0;
+	virtual std::string getText(TextClass klass, std::string text) = 0;
 };
 
 class View
@@ -81,10 +93,23 @@ public:
 	View *getActiveView();
 
 	static void readline(std::string cmd, std::string &command, std::vector<std::string> &args);
+	bool hasColor() {return mColors;};
+	std::string getText(TextClass klass, std::string text);
 private:
 	Backend::Project *mProject;
 	TaskListView mListView;
 	std::vector<View*> mViewStack;
+	bool mColors;
+
+	const char *NORMAL;
+	const char *BOLD;
+	const char *UNDERLINE;
+	const char *INVERT;
+	const char *OVERLINE;
+	const char *RED;
+	const char *GREEN;
+	const char *BLUE;
+	const char *CYAN;
 };
 
 };
