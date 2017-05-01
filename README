@@ -6,6 +6,10 @@ It stores all data in json files and uses git for tracking
 the changes.
 
 The data is stored in following directory structure:
+ * tasks.json <-- array of tasks
+ * tasker.conf <-- configuration file
+
+TODO the following structure would be nice:
  * tasks
    * task #1
    * ...
@@ -36,3 +40,9 @@ the issues even if you are offline. Both can be accomplished with proper
 version control. I decided to use git just because it's decentralized and
 It's only version control that I have used for now.
 
+TODO
+====
+
+Currently the code uses handmade git and json handling code, but
+it would be better to use proper json library and c++ wrapper for
+libgit2.
