@@ -9,6 +9,19 @@ namespace Backend {
 
 class GitBackend;
 
+class GitException : public std::exception {
+public:
+	GitException(std::string &source);
+	GitException(const char *source);
+	const char *getMessage(std::string &source);
+
+	const char *what() const throw() {
+		return mMessage;
+	}
+private:
+	const char *mMessage;
+};
+
 class GitFileBuffer : public std::streambuf {
 public:
 	GitFileBuffer(GitBackend *backend, std::string file);

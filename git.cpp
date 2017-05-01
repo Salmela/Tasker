@@ -19,6 +19,7 @@
  */
 
 #include <string>
+#include <cstring>
 #include <git2.h>
 #include "git.h"
 
@@ -26,6 +27,20 @@ namespace Tasker {
 namespace Backend {
 
 int GitBackend::refs_to_lib = 0;
+
+GitException::GitException(std::string &source) {
+	mMessage = getMessage(source);
+}
+
+GitException::GitException(const char *source) {
+	std::string src = std::string(source);
+	mMessage = getMessage(src);
+}
+
+const char *GitException::getMessage(std::string &source) {
+	const git_error *error = giterr_last();
+	return strdup((source + ": " + error->message).c_str());
+}
 
 GitBackend::GitBackend()
 	:mRepo(NULL), mTreeBuilder(NULL)
@@ -55,7 +70,7 @@ GitBackend *GitBackend::open(std::string path)
 	GitBackend *backend = new GitBackend();
 	//git_repository_open_bare ?
 	if(git_repository_open(&backend->mRepo, path.c_str())) {
-		throw "repo open failed";
+		throw GitException("repo open failed");
 	}
 	return backend;
 }
@@ -66,16 +81,12 @@ GitBackend *GitBackend::create(std::string path)
 	bool is_bare = false;//no working dir
 	//git_repository_init_init_options ?
 	if(git_repository_init(&backend->mRepo, path.c_str(), is_bare)) {
-		throw "repo init failed";
+		throw GitException("repo init failed");
 	}
 	if(git_treebuilder_new(&backend->mTreeBuilder, backend->mRepo, NULL)) {
-		throw "Failed to create initial tree for repo";
+		throw GitException("Failed to create initial tree for repo");
 	}
-	try {
-		backend->commit();
-	} catch(...) {
-		throw "Failed to create initial commit";
-	}
+	backend->commit();
 	return backend;
 }
 
@@ -84,7 +95,7 @@ GitFileBuffer *GitBackend::addFile(std::string file)
 	if(!mTreeBuilder) {
 		int ret = git_treebuilder_new(&mTreeBuilder, mRepo, NULL);
 		if(ret) {
-			throw "Failed to create tree builder";
+			throw GitException("Failed to create tree builder");
 		}
 	}
 
@@ -99,25 +110,25 @@ void GitBackend::commit()
 	git_signature *author;
 
 	if(!mTreeBuilder) {
-		throw "No changes";
+		throw GitException("No changes");
 	}
 
 	if(git_treebuilder_write(&oid_tree, mTreeBuilder)) {
-		throw "Write failed";
+		throw GitException("Write failed");
 	}
 
 	if(git_tree_lookup(&tree, mRepo, &oid_tree)) {
-		throw "Tree lookup failed";
+		throw GitException("Tree lookup failed");
 	}
 
 	if(git_signature_default(&author, mRepo)) {
-		throw "No default user";
+		throw GitException("No default user");
 	}
 	git_commit *head = getHead();
 	std::string msg = getNextCommitMessage(head);
 	if(git_commit_create(&oid, mRepo, "HEAD", author, author, "UTF-8",
 		msg.c_str(), tree, head ? 1 : 0, (const git_commit**)&head)) {
-		throw "Failed to create commit";
+		throw GitException("Failed to create commit");
 	}
 	git_commit_free(head);
 	git_signature_free(author);
@@ -165,7 +176,7 @@ std::streambuf *GitBackend::getFile(std::string path)
 	}
 	git_tree_free(root);
 	if(git_tree_entry_type(entry) != GIT_OBJ_BLOB) {
-		throw "entry is not a file";
+		throw GitException("entry is not a file");
 	}
 	git_blob *blob;
 	git_tree_entry_to_object((git_object**)&blob, mRepo, entry);
@@ -189,15 +200,15 @@ GitFileBuffer::~GitFileBuffer()
 	git_blob *blob;
 
 	if(git_blob_create_frombuffer(&oid, mBackend->mRepo, mBuf.c_str(), mBuf.size())) {
-		throw "Failed to create file from string";
+		throw GitException("Failed to create file from string");
 	}
 
 	if(git_blob_lookup(&blob, mBackend->mRepo, &oid)) {
-		throw "Failed to find new blob";
+		throw GitException("Failed to find new blob");
 	}
 
 	if(git_treebuilder_insert(NULL, mBackend->mTreeBuilder, mFile.c_str(), &oid, GIT_FILEMODE_BLOB)) {
-		throw "Can't insert blob to tree";
+		throw GitException("Can't insert blob to tree");
 	}
 	git_blob_free(blob);
 }
