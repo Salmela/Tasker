@@ -1,5 +1,7 @@
 Tasker
 ======
+[![license](https://img.shields.io/github/license/Salmela/Tasker.svg)]()
+[![GitHub tag](https://img.shields.io/github/tag/Salmela/Tasker.svg)]()
 
 [![Usage video](resources/cover.png)](https://raw.githubusercontent.com/Salmela/Tasker/master/resources/demo.webm)
 
