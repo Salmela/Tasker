@@ -1,6 +1,9 @@
 Tasker
 ======
 
+[![Usage video](resources/cover.png)](https://raw.githubusercontent.com/Salmela/Tasker/master/resources/demo.webm)
+
+
 This projects goal is to create simple task management software.
 It stores all data in json files and uses git for tracking
 the changes.
