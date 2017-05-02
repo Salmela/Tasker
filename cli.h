@@ -92,6 +92,7 @@ public:
 	void quit() override;
 	View *getActiveView();
 
+	static std::string getLine(std::string cmd);
 	static void readline(std::string cmd, std::string &command, std::vector<std::string> &args);
 	bool hasColor() {return mColors;};
 	std::string getText(TextClass klass, std::string text);

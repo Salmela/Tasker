@@ -26,8 +26,11 @@
 #include <string>
 #include <exception>
 #include <unistd.h>
-#include <readline/readline.h>
-#include <readline/history.h>
+
+#ifdef _NO_READLINE_
+# include <readline/readline.h>
+# include <readline/history.h>
+#endif
 
 #include "backend.h"
 #include "cli.h"
@@ -153,9 +156,8 @@ bool Main::init(int argc, char **argv)
 	}
 	std::cerr << "Tasker data not found.\n";
 	while(true) {
-		std::cout << "Create a new tasker repository? [y/n] ";
-		std::string line;
-		std::getline(std::cin, line);
+		std::string prompt = "Create a new tasker repository? [y/n]";
+		std::string line = Main::getLine(prompt);
 		if(line == "y") {
 			break;
 		} else if(line == "n") {
@@ -163,19 +165,38 @@ bool Main::init(int argc, char **argv)
 		}
 	}
 	mProject = Backend::Project::create("./");
-	std::cout << "Where is the project folder? ";
-	std::string src;
-	std::getline(std::cin, src);
+	std::string src = Main::getLine("Where is the project folder?");
 
 	Backend::Config::setTaskerData(cwd, src);
 	return true;
+}
+
+std::string Main::getLine(std::string cmd)
+{
+	std::string line;
+#ifdef _READLINE_H_
+	HISTORY_STATE *state = history_get_history_state();
+	HISTORY_STATE tmp_state = {0};
+	history_set_history_state(&tmp_state);
+	char *buf = ::readline((cmd + " ").c_str());
+	line = std::string(buf);
+	free(buf);
+	//clear_history();
+	history_set_history_state(state);
+#else
+	std::cout << cmd << " ";
+	std::getline(std::cin, line);
+#endif
+	return line;
 }
 
 void Main::readline(std::string cmd, std::string &command, std::vector<std::string> &args)
 {
 	std::string line;
 #ifdef _READLINE_H_
-	line = std::string(::readline((cmd + " ").c_str()));
+	char *buf = ::readline((cmd + " ").c_str());
+	line = std::string(buf);
+	free(buf);
 	if(!line.empty()) {
 		add_history(line.c_str());
 	}
@@ -413,11 +434,8 @@ void CreateTaskView::render(CliInterface *parent)
 {
 	std::string name, type;
 
-	std::cout << "Name: ";
-	std::getline(std::cin, name);
-
-	std::cout << "Type: ";
-	std::getline(std::cin, type);
+	name = Main::getLine("Name:");
+	type = Main::getLine("Type:");
 	std::cout << "\n";
 
 	auto *prj = parent->getProject();
