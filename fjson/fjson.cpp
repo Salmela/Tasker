@@ -319,9 +319,6 @@ TokenCache::TokenCache()
 
 void TokenCache::record(Token &token)
 {
-	if(token.type == SEPARATOR && mTokens.empty()) {
-		token.value.visible = false;
-	}
 	mTokens.push_back(token);
 }
 
@@ -461,7 +458,6 @@ void Reader::skipValue(TokenCache *cache, bool isForeignKey)
 	if(cache && isForeignKey) {
 		if(!mStack.empty() && mStack.back() == '{') {
 			Token t(SEPARATOR);
-			t.value.visible = !mAfterStartBracket;
 			mCache->record(t);
 
 			Token t2(STRING);
@@ -485,7 +481,6 @@ void Reader::skipValue(TokenCache *cache, bool isForeignKey)
 			startObject();
 			if(mCache && mToken.type != END_OBJECT) {
 				Token t(SEPARATOR);
-				t.value.visible = false;
 				mCache->record(t);
 			}
 			while(readObjectKey(key)) {
@@ -496,7 +491,6 @@ void Reader::skipValue(TokenCache *cache, bool isForeignKey)
 			startArray();
 			if(mCache && mToken.type != END_ARRAY) {
 				Token t(SEPARATOR);
-				t.value.visible = false;
 				mCache->record(t);
 			}
 			while(hasNextElement()) {
@@ -757,7 +751,6 @@ void Writer::writeObjectKey(std::string key)
 		throw ApiException("bad state");
 	}
 	Token t(SEPARATOR);
-	t.value.visible = (mState == S_VALUE);
 	writeToken(&t);
 
 	Token t2(STRING);
@@ -795,7 +788,6 @@ void Writer::startNextElement()
 		throw ApiException("bad state");
 	}
 	Token t(SEPARATOR);
-	t.value.visible = (mState == S_VALUE);
 	writeToken(&t);
 }
 
@@ -845,7 +837,7 @@ void Writer::writeToken(Token *token)
 			newState = S_VALUE;
 			break;
 		case SEPARATOR:
-			if(token->value.visible) {
+			if(mState != S_START) {
 				mStream.put(',');
 				doIndentation(true);
 			} else {

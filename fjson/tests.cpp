@@ -517,7 +517,17 @@ static bool replayForeignValues()
 	out->write(std::string("a"));
 	out->endObject();
 
-	res &= ostream.str() == "{\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t],\n\t\"abc\": \"a\"\n}";
+	res &= ostream.str() == "{\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t],\n\t\"abc\": \"a\"\n}\n";
+
+	// in reverse order
+	createWriter(true);
+	out->startObject();
+	out->writeObjectKey("abc");
+	out->write(std::string("a"));
+	out->write(cache);
+	out->endObject();
+
+	res &= ostream.str() == "{\n\t\"abc\": \"a\",\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t]\n}\n";
 
 	TokenCache cache2;
 
@@ -536,9 +546,8 @@ static bool replayForeignValues()
 	out->write(cache2);
 	out->endObject();
 
-	res &= ostream.str() == "{\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t],\n\t\"abc\": \"a\"\n}";
+	res &= ostream.str() == "{\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t],\n\t\"abc\": \"a\"\n}\n";
 //	cache2.dump();
-//	std::cout << ostream.str() << "\n{\n\t\"test\": [\n\t\t[\n\t\t\t1\n\t\t],\n\t\t[]\n\t],\n\t\"abc\": \"a\"\n}\n";
 
 	TokenCache cache3;
 	createReader("{\"test\": {\"xyz\": [1]}, \"abc\": true}");
@@ -555,7 +564,7 @@ static bool replayForeignValues()
 	out->startObject();
 	out->write(cache3);
 	out->endObject();
-	res &= ostream.str() == "{\n\t\"test\": {\n\t\t\"xyz\": [\n\t\t\t1\n\t\t]\n\t}\n}";
+	res &= ostream.str() == "{\n\t\"test\": {\n\t\t\"xyz\": [\n\t\t\t1\n\t\t]\n\t}\n}\n";
 
 	return res;
 }

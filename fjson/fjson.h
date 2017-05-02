@@ -34,7 +34,6 @@ struct Token {
 	TokenType type;
 	std::string string;
 	union {
-		bool visible;
 		bool boolean;
 		long integer;
 		double real;
