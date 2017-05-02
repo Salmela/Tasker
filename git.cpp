@@ -69,8 +69,12 @@ GitBackend *GitBackend::open(std::string path)
 {
 	GitBackend *backend = new GitBackend();
 	//git_repository_open_bare ?
-	if(git_repository_open(&backend->mRepo, path.c_str())) {
-		throw GitException("repo open failed");
+	int ret;
+	if((ret = git_repository_open(&backend->mRepo, path.c_str()))) {
+		if(ret == GIT_ENOTFOUND) {
+			return NULL;
+		}
+		throw GitException("Repo open failed");
 	}
 	return backend;
 }
@@ -81,7 +85,7 @@ GitBackend *GitBackend::create(std::string path)
 	bool is_bare = false;//no working dir
 	//git_repository_init_init_options ?
 	if(git_repository_init(&backend->mRepo, path.c_str(), is_bare)) {
-		throw GitException("repo init failed");
+		throw GitException("Repo init failed");
 	}
 	if(git_treebuilder_new(&backend->mTreeBuilder, backend->mRepo, NULL)) {
 		throw GitException("Failed to create initial tree for repo");

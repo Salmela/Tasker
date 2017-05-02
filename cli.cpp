@@ -165,9 +165,12 @@ bool Main::init(int argc, char **argv)
 		}
 	}
 	mProject = Backend::Project::create("./");
-	std::string src = Main::getLine("Where is the project folder?");
+	dir = Main::getLine("Where do you want the issues?");
+	char *buf = realpath(dir.c_str(), NULL);
+	dir.assign(buf);
+	free(buf);
 
-	Backend::Config::setTaskerData(cwd, src);
+	Backend::Config::setTaskerData(cwd, dir);
 	return true;
 }
 
