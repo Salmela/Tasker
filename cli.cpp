@@ -27,7 +27,7 @@
 #include <exception>
 #include <unistd.h>
 
-#ifdef _NO_READLINE_
+#ifndef _NO_READLINE_
 # include <readline/readline.h>
 # include <readline/history.h>
 #endif
@@ -143,16 +143,26 @@ bool Main::init(int argc, char **argv)
 {
 	char *cwd_tmp = get_current_dir_name();
 	std::string cwd = cwd_tmp;
-	std::string dir = Backend::Config::guessProjectDir(cwd);
 	free(cwd_tmp);
+
+	std::string dir = Backend::Config::getTaskerData(cwd, NULL);
+	bool knownToExist = !dir.empty();
+	if(!knownToExist) {
+		dir = cwd;
+	}
 
 	if(argc >= 2) {
 		dir = argv[1];
+		knownToExist = false;
 	}
 
 	mProject = Backend::Project::open(dir);
 	if(mProject) {
 		return true;
+	}
+	if(knownToExist) {
+		std::cerr << "The config file contains non-existing project " << dir << "\n";
+		return false;
 	}
 	std::cerr << "Tasker data not found.\n";
 	while(true) {
@@ -164,12 +174,13 @@ bool Main::init(int argc, char **argv)
 			return false;
 		}
 	}
-	mProject = Backend::Project::create("./");
 	dir = Main::getLine("Where do you want the issues?");
-	char *buf = realpath(dir.c_str(), NULL);
-	dir.assign(buf);
-	free(buf);
+	// Ugly way to turn relative path to absolute path
+	if(dir[0] != '/') {
+		dir = cwd + "/" + dir;
+	}
 
+	mProject = Backend::Project::create(dir);
 	Backend::Config::setTaskerData(cwd, dir);
 	return true;
 }

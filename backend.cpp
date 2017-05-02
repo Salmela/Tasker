@@ -1648,7 +1648,7 @@ std::string Config::getTaskerData(std::string path, std::string *source)
 	return "";
 }
 
-void Config::setTaskerData(std::string path, std::string source)
+void Config::setTaskerData(std::string source, std::string path)
 {
 	mConfig.addRepository(source, path);
 

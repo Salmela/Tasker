@@ -372,7 +372,7 @@ public:
 	static std::string guessProjectDir(std::string currentWorkDir);
 	static std::string getSourceDir(std::string taskerPath);
 	static std::string getTaskerData(std::string path, std::string *source = NULL);
-	static void setTaskerData(std::string path, std::string source);
+	static void setTaskerData(std::string source, std::string path);
 private:
 	Config();
 	~Config();
