@@ -73,7 +73,7 @@ User *User::read(FJson::Reader &in)
 		} else if(key == "email") {
 			in.read(user->mEmail);
 		} else {
-			in.skipValue(&user->mForeignKeys);
+			in.skipValue(&user->mForeignKeys, true);
 		}
 	}
 	return user;
@@ -171,7 +171,7 @@ TaskState *TaskState::read(TaskType *type, FJson::Reader &in)
 		} else if(key == "id") {
 			in.read(id);
 		} else {
-			in.skipValue(&foreignKeys);
+			in.skipValue(&foreignKeys, true);
 		}
 	}
 	if(id == TaskState::INVALID_ID || name.empty()) {
@@ -350,7 +350,7 @@ TaskType *TaskType::read(Project *project, FJson::Reader &in)
 				TaskState::read(type, in);
 			}
 		} else {
-			in.skipValue(&type->mForeignKeys);
+			in.skipValue(&type->mForeignKeys, true);
 		}
 	}
 	type->mStartState = type->mStates[startState];
@@ -562,7 +562,7 @@ TaskEvent *TaskEvent::read(Project *project, FJson::Reader &in)
 			value.read(time);
 			event->mDate = Date(time);
 		} else if(!event->readInternal(value, key)) {
-			value.skipValue(&event->mForeignKeys);
+			value.skipValue(&event->mForeignKeys, true);
 		}
 	}
 	return event;
@@ -867,7 +867,7 @@ Task *Task::read(Project *project, FJson::Reader &in)
 				task->mEvents.push_back(event);
 			}
 		} else {
-			in.skipValue(&task->mForeignKeys);
+			in.skipValue(&task->mForeignKeys, true);
 		}
 	}
 	if(state != -1) {
@@ -902,7 +902,7 @@ void Task::write(FJson::Writer &out) const
 		out.write(mAssigned->getName());
 	}
 	out.writeObjectKey("state");
-	out.write(mId);
+	out.write(mState->getId());
 	out.writeObjectKey("sub-tasks");
 	out.startArray();
 	for(auto task : mSubTasks) {
@@ -1532,7 +1532,7 @@ bool Project::read()
 		} else if(key == "task-path") {
 			in.read(mTaskFile);
 		} else {
-			in.skipValue(&mForeignKeys);
+			in.skipValue(&mForeignKeys, true);
 		}
 	}
 	delete buf;
@@ -1684,7 +1684,7 @@ void Config::readHomeConfig() {
 		} else if(key == "default-user") {
 			mDefaultUser = User::read(in);
 		} else {
-			in.skipValue(&Config::mConfig.mForeignKeys);
+			in.skipValue(&Config::mConfig.mForeignKeys, true);
 		}
 	}
 }
