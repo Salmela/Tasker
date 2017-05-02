@@ -40,6 +40,13 @@ the issues even if you are offline. Both can be accomplished with proper
 version control. I decided to use git just because it's decentralized and
 It's only version control that I have used for now.
 
+Readline
+========
+
+The tasker uses readline to get nicer input fields, but the Readline doesn't
+free the memory before exit so you can compile the project with flag `_NO_READLINE_`
+to disable readline. This is useful while debugging memory leaks.
+
 TODO
 ====
 
